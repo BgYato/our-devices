@@ -21,4 +21,6 @@ public interface IDeviceRepository extends JpaRepository<DeviceEntity, String> {
 
     // Verificar si un dispositivo ya existe para un usuario
     boolean existsByNameAndUserIdAndIsDeletedFalse(String name, String userId);
+
+    List<DeviceEntity> findByUserIdAndIsDeletedFalse(String userId);
 }

@@ -43,9 +43,18 @@ public class DeviceEntity {
     @Temporal(TemporalType.TIMESTAMP)
     private Date dateCreation;
 
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date updatedAt;
+
     @PrePersist
     protected void onCreate() {
         dateCreation = new Date();
         lastSeen = new Date();
     }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = new Date();
+    }
+
 }
