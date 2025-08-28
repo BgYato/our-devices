@@ -12,8 +12,9 @@ public class UsersResponseDTO {
     private String id;
     private String firstName;
     private String lastName;
+    private String username;
     private String email;
-    private boolean isValidated;
     private boolean isDeleted;
     private Date dateCreation;
+    private Date updatedAt;
 }

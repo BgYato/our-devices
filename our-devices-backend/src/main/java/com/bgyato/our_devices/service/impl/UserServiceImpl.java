@@ -32,14 +32,14 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public UsersResponseDTO saveUser(UsersCreateDTO userCreateDTO) {
-        if (validateIfUserExistsBeforeSave(userCreateDTO.getEmail())) {
-            throw new EntityAlreadyExistsException("El correo ya se encuentra registrado");
+        if (validateIfUserExistsBeforeSave(userCreateDTO.getEmail(), userCreateDTO.getUsername())) {
+            throw new EntityAlreadyExistsException("El correo o nombre de usuario ya se encuentra registrado");
         }
 
-        String uuid = UUID.randomUUID().toString();
         UserEntity user = modelMapper.map(userCreateDTO, UserEntity.class);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
+
         return modelMapper.map(user, UsersResponseDTO.class);
     }
 
@@ -71,14 +71,18 @@ public class UserServiceImpl implements IUserService {
         }
 
         if (userUpdateDTO.getEmail() != null && !userUpdateDTO.getEmail().equals(user.getEmail())) {
-            if (validateIfUserExistsBeforeSave(userUpdateDTO.getEmail())) {
+            if (userRepository.existsByEmailAndIsDeletedFalse(userUpdateDTO.getEmail())) {
                 throw new EntityAlreadyExistsException("El correo ya existe en la base de datos");
             }
-
             user.setEmail(userUpdateDTO.getEmail());
-            user.setValidated(false);
         }
 
+        if (userUpdateDTO.getUsername() != null && !userUpdateDTO.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsernameAndIsDeletedFalse(userUpdateDTO.getUsername())) {
+                throw new EntityAlreadyExistsException("El nombre de usuario ya existe en la base de datos");
+            }
+            user.setUsername(userUpdateDTO.getUsername());
+        }
 
         userRepository.save(user);
 
@@ -100,37 +104,34 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public void deleteUser(String authorizationHeader, PasswordDTO password) {
-//        String token =  authorizationHeader.replace("Bearer ", "");
-//        System.out.println(token);
-//        String email =  jwtService.getEmailFromToken(token);
-//        UserEntity user = userRepository.findByEmail(email)
-//                .orElseThrow(() -> new EntityNotFoundException("No se encontró al usuario con dicho correo."));
-//
-//        if (!passwordEncoder.matches(password.getPassword(), user.getPassword())) {
-//            throw new BadCredentialsException("La contraseña actual es incorrecta.");
-//        }
-//
-//        user.setDeleted(true);
-//        userRepository.save(user);
+        String token =  authorizationHeader.replace("Bearer ", "");
+        String email =  jwtService.getEmailFromToken(token);
+        UserEntity user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró al usuario con dicho correo."));
+
+        if (!passwordEncoder.matches(password.getPassword(), user.getPassword())) {
+            throw new BadCredentialsException("La contraseña actual es incorrecta.");
+        }
+
+        user.setDeleted(true);
+        userRepository.save(user);
     }
 
     @Override
     public UsersResponseDTO getCurrentUser(String authorizationHeader) {
-//        String token =  authorizationHeader.replace("Bearer ", "");
-//        String email =  jwtService.getEmailFromToken(token);
-//        UserEntity user = userRepository.findByEmail(email)
-//                .orElseThrow(() -> new EntityNotFoundException("No se encontró al usuario con dicho correo."));
-//        return modelMapper.map(user, UsersResponseDTO.class);
-        return null;
+        String token =  authorizationHeader.replace("Bearer ", "");
+        String email =  jwtService.getEmailFromToken(token);
+        UserEntity user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró al usuario con dicho correo."));
+        return modelMapper.map(user, UsersResponseDTO.class);
     }
 
 
-    private boolean validateIfUserExistsBeforeSave(String email) {
-        if (email != null) {
-            return userRepository.existsByEmailAndIsDeletedFalse(email);
+    private boolean validateIfUserExistsBeforeSave(String email, String username) {
+        if (email == null && username == null) {
+            return false;
         }
-
-        return false;
+        return userRepository.existsByEmailOrUsernameAndIsDeletedFalse(email, username);
     }
 
 }

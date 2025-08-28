@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UsersUpdateDTO {
+    private String username;
     private String firstName;
     private String lastName;
     private String email;
-    private Boolean isValidated;
     private Boolean isDeleted;
 }

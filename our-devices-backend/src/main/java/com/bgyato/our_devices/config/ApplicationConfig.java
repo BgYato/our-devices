@@ -1,5 +1,7 @@
 package com.bgyato.our_devices.config;
 
+import com.bgyato.our_devices.exceptions.commons.EntityNotFoundException;
+import com.bgyato.our_devices.models.entities.UserEntity;
 import com.bgyato.our_devices.repository.IUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +13,8 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
 
 @Configuration
 @RequiredArgsConstructor
@@ -39,14 +43,23 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> {
-//            UserEntity user = userRepository.findByEmail(username).orElseThrow();
-//            return org.springframework.security.core.userdetails.User.builder()
-//                    .username(user.getEmail())
-//                    .password(user.getPassword())
-//                    .roles("USER")
-//                    .build();
-            return null;
+        return identifier -> {
+            Optional<UserEntity> userOpt;
+            if (identifier.contains("@")) {
+                userOpt = userRepository.findByEmailAndIsDeletedFalse(identifier);
+            } else {
+                userOpt = userRepository.findByUsernameAndIsDeletedFalse(identifier);
+            }
+
+            UserEntity user = userOpt.orElseThrow(
+                    () -> new EntityNotFoundException("Usuario no encontrado con: " + identifier)
+            );
+
+            return org.springframework.security.core.userdetails.User.builder()
+                    .username(user.getEmail()) // Ojo: aquí Spring necesita un username único, pero puede seguir siendo el email
+                    .password(user.getPassword())
+                    .roles("USER")
+                    .build();
         };
     }
 

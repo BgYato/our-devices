@@ -1,5 +1,6 @@
 package com.bgyato.our_devices.controllers;
 
+import com.bgyato.our_devices.commons.constants.security.SecurityConstants;
 import com.bgyato.our_devices.models.dto.*;
 import com.bgyato.our_devices.models.dto.user.UsersCreateDTO;
 import com.bgyato.our_devices.models.dto.user.UsersResponseDTO;
@@ -38,7 +39,7 @@ public class UserController {
     }
 
     @DeleteMapping("")
-    public ResponseEntity<Void> deleteUser(@RequestHeader("Authorization") String authorizationHeader, @RequestBody PasswordDTO passwordDTO) {
+    public ResponseEntity<Void> deleteUser(@RequestHeader(SecurityConstants.JWT_HEADER) String authorizationHeader, @RequestBody PasswordDTO passwordDTO) {
         userService.deleteUser(authorizationHeader, passwordDTO);
         return ResponseEntity.status(HttpStatus.OK).body(null);
     }
@@ -49,7 +50,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UsersResponseDTO> getCurrentUser(@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<UsersResponseDTO> getCurrentUser(@RequestHeader(SecurityConstants.JWT_HEADER) String authorizationHeader) {
         return ResponseEntity.status(HttpStatus.OK).body(userService.getCurrentUser(authorizationHeader));
     }
 }

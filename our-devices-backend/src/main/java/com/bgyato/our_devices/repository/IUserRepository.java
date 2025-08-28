@@ -20,5 +20,9 @@ public interface IUserRepository extends JpaRepository<UserEntity, String> {
     Optional<UserEntity> findByIdAndIsDeletedFalse(String id);
 
     // Verificar existencia por email
+    boolean existsByEmailOrUsernameAndIsDeletedFalse(String email, String username);
+
     boolean existsByEmailAndIsDeletedFalse(String email);
+
+    boolean existsByUsernameAndIsDeletedFalse(String username);
 }

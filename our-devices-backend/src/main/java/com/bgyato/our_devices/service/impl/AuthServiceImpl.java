@@ -1,14 +1,23 @@
 package com.bgyato.our_devices.service.impl;
 
+import com.bgyato.our_devices.exceptions.commons.BadCredentialsException;
+import com.bgyato.our_devices.exceptions.commons.EntityNotFoundException;
 import com.bgyato.our_devices.models.dto.AuthRequest;
 import com.bgyato.our_devices.models.dto.AuthResponse;
+import com.bgyato.our_devices.models.entities.UserEntity;
 import com.bgyato.our_devices.repository.IUserRepository;
 import com.bgyato.our_devices.service.interfaces.IAuthService;
 import com.bgyato.our_devices.service.interfaces.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -23,39 +32,38 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public AuthResponse login(AuthRequest loginRequest) {
-//        try {
-//            UserEntity user = userRepository.findByEmailAndIsDeletedFalse(loginRequest.getEmail())
-//                    .orElseThrow(() -> new EntityNotFoundException(String.format("El usuario con correo '%s' no fue encontrado.", loginRequest.getEmail())));
-//
-//            if (!user.isValidated()) {
-//                throw new UserIsNotValidatedException("El correo no ha sido validado correctamente.");
-//            }
-//
-//            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
-//        } catch (AuthenticationException ex) {
-//            throw new BadCredentialsException("Credenciales incorrectas");
-//        }
-//
-//        UserEntity userEntity = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow();
-//
-//        UserDetails user = userRepository.findByEmail(loginRequest.getEmail())
-//                .map(u -> org.springframework.security.core.userdetails.User.builder()
-//                        .username(u.getEmail())
-//                        .password(u.getPassword())
-//                        .roles("USER")
-//                        .build())
-//                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
-//
-//        Map<String, Object> extraClaims = new HashMap<>();
-//        extraClaims.put("id", userEntity.getId());
-//        extraClaims.put("fullName", (userEntity.getFirstName() + " " + userEntity.getLastName()));
-//        extraClaims.put("email", userEntity.getEmail());
-//
-//        String token = jwtServiceImpl.getToken(extraClaims, user);
-//        return AuthResponse.builder()
-//                .token(token)
-//                .build();
-        return null;
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getIdentifier(),
+                            loginRequest.getPassword()
+                    )
+            );
+        } catch (AuthenticationException ex) {
+            throw new BadCredentialsException("Credenciales incorrectas: " + ex.getMessage());
+        }
+
+        UserEntity userEntity = loginRequest.getIdentifier().contains("@")
+                ? userRepository.findByEmailAndIsDeletedFalse(loginRequest.getIdentifier()).orElseThrow()
+                : userRepository.findByUsernameAndIsDeletedFalse(loginRequest.getIdentifier()).orElseThrow();
+
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("id", userEntity.getId());
+        extraClaims.put("fullName", userEntity.getFirstName() + " " + userEntity.getLastName());
+        extraClaims.put("email", userEntity.getEmail());
+        extraClaims.put("username", userEntity.getUsername());
+
+        UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                .username(userEntity.getEmail()) // se usa como principal
+                .password(userEntity.getPassword())
+                .roles("USER")
+                .build();
+
+        String token = jwtServiceImpl.getToken(extraClaims, userDetails);
+
+        return AuthResponse.builder()
+                .token(token)
+                .build();
     }
 
 }

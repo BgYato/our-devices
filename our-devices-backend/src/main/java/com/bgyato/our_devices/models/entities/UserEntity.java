@@ -7,7 +7,7 @@ import org.hibernate.annotations.UuidGenerator;
 import java.util.Date;
 
 @Entity
-@Table(name = "user_entity")
+@Table(name = "users_entity")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,9 +30,6 @@ public class UserEntity {
 
     @Column(nullable = false)
     private String password;
-
-    @Column(name = "is_validated", columnDefinition = "BOOLEAN DEFAULT FALSE")
-    private boolean isValidated = false;
 
     @Column(name = "is_deleted",columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean isDeleted = false;

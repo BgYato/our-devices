@@ -45,7 +45,8 @@ public class OPSecurityConfig {
                     }
                 }))
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authProvider)
