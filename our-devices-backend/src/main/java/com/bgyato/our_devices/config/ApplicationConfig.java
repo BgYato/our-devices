@@ -52,11 +52,11 @@ public class ApplicationConfig {
             }
 
             UserEntity user = userOpt.orElseThrow(
-                    () -> new EntityNotFoundException("Usuario no encontrado con: " + identifier)
+                    () -> new EntityNotFoundException("Cuenta no encontrada. ")
             );
 
             return org.springframework.security.core.userdetails.User.builder()
-                    .username(user.getEmail()) // Ojo: aquí Spring necesita un username único, pero puede seguir siendo el email
+                    .username(user.getEmail())
                     .password(user.getPassword())
                     .roles("USER")
                     .build();

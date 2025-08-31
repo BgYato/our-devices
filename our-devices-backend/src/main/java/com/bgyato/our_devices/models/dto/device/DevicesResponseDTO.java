@@ -17,4 +17,5 @@ public class DevicesResponseDTO {
     private String ipAddress;
     private Integer batteryLevel;
     private Date lastSeen;
+    private String status;
 }

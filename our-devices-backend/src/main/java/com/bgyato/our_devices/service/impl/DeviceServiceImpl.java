@@ -79,6 +79,15 @@ public class DeviceServiceImpl implements IDeviceService {
     }
 
     private DevicesResponseDTO mapToResponse(DeviceEntity device) {
+        String status = "offline";
+
+        if (device.getLastSeen() != null) {
+            long diff = new Date().getTime() - device.getLastSeen().getTime();
+            if (diff < 2 * 60 * 1000) {
+                status = "online";
+            }
+        }
+
         return new DevicesResponseDTO(
                 device.getId(),
                 device.getUser().getId(),
@@ -86,7 +95,9 @@ public class DeviceServiceImpl implements IDeviceService {
                 device.getType(),
                 device.getIpAddress(),
                 device.getBatteryLevel(),
-                device.getLastSeen()
+                device.getLastSeen(),
+                status
         );
     }
+
 }

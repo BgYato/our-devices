@@ -40,7 +40,7 @@ public class AuthServiceImpl implements IAuthService {
                     )
             );
         } catch (AuthenticationException ex) {
-            throw new BadCredentialsException("Credenciales incorrectas: " + ex.getMessage());
+            throw new BadCredentialsException("Error al iniciar sesión: " + (ex.getMessage().equals("Bad credentials") ? "Contraseña incorrecta" : ex.getMessage()));
         }
 
         UserEntity userEntity = loginRequest.getIdentifier().contains("@")
