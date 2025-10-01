@@ -1,0 +1,10 @@
+{
+  "api_url": "http://localhost:8080",
+  "endpoints": {
+    "login": "/auth/login",
+    "me": "/users/me",
+    "devices_by_user": "/devices/by-user",
+    "update_device": "/devices"
+  },
+  "app_name": "OurDevices"
+}
