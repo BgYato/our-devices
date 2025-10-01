@@ -30,7 +30,7 @@ public class DevicesController {
         return ResponseEntity.status(HttpStatus.OK).body(deviceService.updateDevice(devicesUpdateDTO, id));
     }
 
-    @DeleteMapping("")
+    @DeleteMapping("")  
     public ResponseEntity<Void> deleteDevice(@RequestParam String id) {
         deviceService.deleteDevice(id);
         return ResponseEntity.status(HttpStatus.OK).body(null);
