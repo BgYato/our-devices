@@ -1,4 +1,4 @@
-package com.bgyato.our_devices.service.impl;
+package com.bgyato.our_devices.services.impl;
 
 import com.bgyato.our_devices.commons.constants.security.SecurityConstants;
 import com.bgyato.our_devices.exceptions.commons.JwtTokenErrorException;

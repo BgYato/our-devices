@@ -74,4 +74,14 @@ public class ExceptionGenericHandlerAdvice {
                 .exception(ex.getClass().getSimpleName())
                 .build());
     }
+
+    @ExceptionHandler(InvalidFieldFormatException.class)
+    public ResponseEntity<ErrorInfo> InvalidFieldFormatException(InvalidFieldFormatException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_EARLY).body(ErrorInfo.builder()
+                .code("1013")
+                .timestamp(String.valueOf(LocalDateTime.now()))
+                .description(ex.getMessage())
+                .exception(ex.getClass().getSimpleName())
+                .build());
+    }
 }

@@ -3,7 +3,7 @@ package com.bgyato.our_devices.controllers;
 import com.bgyato.our_devices.models.dto.device.DevicesCreateDTO;
 import com.bgyato.our_devices.models.dto.device.DevicesResponseDTO;
 import com.bgyato.our_devices.models.dto.device.DevicesUpdateDTO;
-import com.bgyato.our_devices.service.interfaces.IDeviceService;
+import com.bgyato.our_devices.services.interfaces.IDeviceService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -1,4 +1,4 @@
-package com.bgyato.our_devices.repository;
+package com.bgyato.our_devices.repositories;
 
 import com.bgyato.our_devices.models.entities.DeviceEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,4 +23,7 @@ public interface IDeviceRepository extends JpaRepository<DeviceEntity, String> {
     boolean existsByNameAndUserIdAndIsDeletedFalse(String name, String userId);
 
     List<DeviceEntity> findByUserIdAndIsDeletedFalse(String userId);
+    Optional<DeviceEntity> findByUser_IdAndNameIgnoreCase(String userId, String name);
+    Optional<DeviceEntity> findByIpAddress(String ipAddress);
+
 }

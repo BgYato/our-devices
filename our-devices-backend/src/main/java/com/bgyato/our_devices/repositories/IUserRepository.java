@@ -1,10 +1,9 @@
-package com.bgyato.our_devices.repository;
+package com.bgyato.our_devices.repositories;
 
 import com.bgyato.our_devices.models.entities.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository

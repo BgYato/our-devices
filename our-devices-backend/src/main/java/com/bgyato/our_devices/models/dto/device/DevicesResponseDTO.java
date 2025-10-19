@@ -12,6 +12,7 @@ import java.util.Date;
 public class DevicesResponseDTO {
     private String id;
     private String userId;
+    private String deviceTypeName;
     private String name;
     private String type;
     private String ipAddress;

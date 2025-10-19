@@ -1,13 +1,12 @@
-package com.bgyato.our_devices.service.impl;
+package com.bgyato.our_devices.services.impl;
 
 import com.bgyato.our_devices.exceptions.commons.BadCredentialsException;
-import com.bgyato.our_devices.exceptions.commons.EntityNotFoundException;
 import com.bgyato.our_devices.models.dto.AuthRequest;
 import com.bgyato.our_devices.models.dto.AuthResponse;
 import com.bgyato.our_devices.models.entities.UserEntity;
-import com.bgyato.our_devices.repository.IUserRepository;
-import com.bgyato.our_devices.service.interfaces.IAuthService;
-import com.bgyato.our_devices.service.interfaces.IUserService;
+import com.bgyato.our_devices.repositories.IUserRepository;
+import com.bgyato.our_devices.services.interfaces.IAuthService;
+import com.bgyato.our_devices.services.interfaces.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

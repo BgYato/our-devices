@@ -11,6 +11,8 @@ import java.util.Date;
 @AllArgsConstructor
 public class DevicesUpdateDTO {
     private String name;
+    private String deviceTypeId;
+    private String customName;
     private String type;
     private String ipAddress;
     private Date lastSeen;

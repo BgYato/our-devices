@@ -2,7 +2,7 @@ package com.bgyato.our_devices.controllers;
 
 import com.bgyato.our_devices.models.dto.AuthRequest;
 import com.bgyato.our_devices.models.dto.AuthResponse;
-import com.bgyato.our_devices.service.interfaces.IAuthService;
+import com.bgyato.our_devices.services.interfaces.IAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -2,7 +2,7 @@ package com.bgyato.our_devices.filter;
 
 import com.bgyato.our_devices.exceptions.ErrorInfo;
 import com.bgyato.our_devices.exceptions.commons.JwtTokenErrorException;
-import com.bgyato.our_devices.service.impl.JwtServiceImpl;
+import com.bgyato.our_devices.services.impl.JwtServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

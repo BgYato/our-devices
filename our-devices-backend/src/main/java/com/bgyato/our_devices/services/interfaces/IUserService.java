@@ -1,4 +1,4 @@
-package com.bgyato.our_devices.service.interfaces;
+package com.bgyato.our_devices.services.interfaces;
 
 import com.bgyato.our_devices.models.dto.*;
 import com.bgyato.our_devices.models.dto.user.UsersCreateDTO;

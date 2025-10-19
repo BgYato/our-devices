@@ -1,4 +1,4 @@
-package com.bgyato.our_devices.service.impl;
+package com.bgyato.our_devices.services.impl;
 
 import com.bgyato.our_devices.exceptions.commons.BadCredentialsException;
 import com.bgyato.our_devices.exceptions.commons.EntityAlreadyExistsException;
@@ -9,8 +9,8 @@ import com.bgyato.our_devices.models.dto.user.UsersResponseDTO;
 import com.bgyato.our_devices.models.dto.user.UsersUpdateDTO;
 import com.bgyato.our_devices.models.dto.user.UsersUpdatePasswordDTO;
 import com.bgyato.our_devices.models.entities.UserEntity;
-import com.bgyato.our_devices.repository.IUserRepository;
-import com.bgyato.our_devices.service.interfaces.IUserService;
+import com.bgyato.our_devices.repositories.IUserRepository;
+import com.bgyato.our_devices.services.interfaces.IUserService;
 
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @AllArgsConstructor

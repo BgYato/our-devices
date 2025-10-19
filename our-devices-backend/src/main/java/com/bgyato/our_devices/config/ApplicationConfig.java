@@ -2,7 +2,7 @@ package com.bgyato.our_devices.config;
 
 import com.bgyato.our_devices.exceptions.commons.EntityNotFoundException;
 import com.bgyato.our_devices.models.entities.UserEntity;
-import com.bgyato.our_devices.repository.IUserRepository;
+import com.bgyato.our_devices.repositories.IUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

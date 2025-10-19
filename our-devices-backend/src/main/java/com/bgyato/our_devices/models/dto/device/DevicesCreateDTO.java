@@ -11,7 +11,9 @@ import java.util.Date;
 @AllArgsConstructor
 public class DevicesCreateDTO {
     private String userId;
+    private String deviceTypeId;
     private String name;
+    private String customName;
     private String type;
     private String ipAddress;
 }

@@ -6,7 +6,7 @@ import com.bgyato.our_devices.models.dto.user.UsersCreateDTO;
 import com.bgyato.our_devices.models.dto.user.UsersResponseDTO;
 import com.bgyato.our_devices.models.dto.user.UsersUpdateDTO;
 import com.bgyato.our_devices.models.dto.user.UsersUpdatePasswordDTO;
-import com.bgyato.our_devices.service.interfaces.IUserService;
+import com.bgyato.our_devices.services.interfaces.IUserService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
