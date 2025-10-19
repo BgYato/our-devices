@@ -1,8 +1,7 @@
 package com.bgyato.our_devices.controllers;
 
-import com.bgyato.our_devices.models.dto.device_type.DevicesTypeResponseDTO;
-import com.bgyato.our_devices.models.dto.device_type.DevicesTypeSaveDTO;
-import com.bgyato.our_devices.models.entities.DeviceTypeEntity;
+import com.bgyato.our_devices.models.dto.device_type.DeviceTypeResponseDTO;
+import com.bgyato.our_devices.models.dto.device_type.DeviceTypeSaveDTO;
 import com.bgyato.our_devices.services.interfaces.IDeviceTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,27 +18,27 @@ public class DeviceTypeController {
     private final IDeviceTypeService deviceTypeService;
 
     @PostMapping
-    public ResponseEntity<DevicesTypeResponseDTO> createType(@RequestBody DevicesTypeSaveDTO type) {
+    public ResponseEntity<DeviceTypeResponseDTO> createType(@RequestBody DeviceTypeSaveDTO type) {
         return ResponseEntity.status(HttpStatus.OK).body(deviceTypeService.create(type));
     }
 
     @GetMapping
-    public ResponseEntity<List<DevicesTypeResponseDTO>> getAllTypes() {
+    public ResponseEntity<List<DeviceTypeResponseDTO>> getAllTypes() {
         return ResponseEntity.status(HttpStatus.OK).body(deviceTypeService.getAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DevicesTypeResponseDTO> getTypeById(@PathVariable String id) {
+    public ResponseEntity<DeviceTypeResponseDTO> getTypeById(@PathVariable String id) {
         return ResponseEntity.status(HttpStatus.OK).body(deviceTypeService.findById(id));
     }
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<DevicesTypeResponseDTO> getTypeByName(@PathVariable String name) {
+    public ResponseEntity<DeviceTypeResponseDTO> getTypeByName(@PathVariable String name) {
         return ResponseEntity.status(HttpStatus.OK).body(deviceTypeService.findByName(name));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DevicesTypeResponseDTO> updateType(@PathVariable String id, @RequestBody DevicesTypeSaveDTO type) {
+    public ResponseEntity<DeviceTypeResponseDTO> updateType(@PathVariable String id, @RequestBody DeviceTypeSaveDTO type) {
         return ResponseEntity.ok(deviceTypeService.update(id, type));
     }
 

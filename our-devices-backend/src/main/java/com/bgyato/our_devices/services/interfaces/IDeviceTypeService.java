@@ -1,15 +1,15 @@
 package com.bgyato.our_devices.services.interfaces;
 
-import com.bgyato.our_devices.models.dto.device_type.DevicesTypeResponseDTO;
-import com.bgyato.our_devices.models.dto.device_type.DevicesTypeSaveDTO;
+import com.bgyato.our_devices.models.dto.device_type.DeviceTypeResponseDTO;
+import com.bgyato.our_devices.models.dto.device_type.DeviceTypeSaveDTO;
 
 import java.util.List;
 
 public interface IDeviceTypeService {
-    DevicesTypeResponseDTO create(DevicesTypeSaveDTO type);
-    List<DevicesTypeResponseDTO> getAll();
-    DevicesTypeResponseDTO findById(String id);
-    DevicesTypeResponseDTO findByName(String name);
-    DevicesTypeResponseDTO update(String id, DevicesTypeSaveDTO type);
+    DeviceTypeResponseDTO create(DeviceTypeSaveDTO type);
+    List<DeviceTypeResponseDTO> getAll();
+    DeviceTypeResponseDTO findById(String id);
+    DeviceTypeResponseDTO findByName(String name);
+    DeviceTypeResponseDTO update(String id, DeviceTypeSaveDTO type);
     void delete(String id);
 }

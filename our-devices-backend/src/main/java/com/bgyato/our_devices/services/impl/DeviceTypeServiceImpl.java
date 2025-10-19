@@ -3,8 +3,8 @@ package com.bgyato.our_devices.services.impl;
 import com.bgyato.our_devices.exceptions.commons.EntityAlreadyExistsException;
 import com.bgyato.our_devices.exceptions.commons.EntityNotFoundException;
 import com.bgyato.our_devices.exceptions.commons.InvalidFieldFormatException;
-import com.bgyato.our_devices.models.dto.device_type.DevicesTypeResponseDTO;
-import com.bgyato.our_devices.models.dto.device_type.DevicesTypeSaveDTO;
+import com.bgyato.our_devices.models.dto.device_type.DeviceTypeResponseDTO;
+import com.bgyato.our_devices.models.dto.device_type.DeviceTypeSaveDTO;
 import com.bgyato.our_devices.models.entities.DeviceTypeEntity;
 import com.bgyato.our_devices.repositories.IDeviceTypeRepository;
 import com.bgyato.our_devices.services.interfaces.IDeviceTypeService;
@@ -22,7 +22,7 @@ public class DeviceTypeServiceImpl implements IDeviceTypeService {
     private ModelMapper modelMapper;
 
     @Override
-    public DevicesTypeResponseDTO create(DevicesTypeSaveDTO type) {
+    public DeviceTypeResponseDTO create(DeviceTypeSaveDTO type) {
         validateNameFormat(type.getName());
 
         if (repository.findByNameIgnoreCaseAndIsDeletedFalse(type.getName()).isPresent()) throw new EntityAlreadyExistsException("Ya existe un tipo con el mismo nombre");
@@ -31,33 +31,33 @@ public class DeviceTypeServiceImpl implements IDeviceTypeService {
 
         repository.save(entity);
 
-        return modelMapper.map(entity, DevicesTypeResponseDTO.class);
+        return modelMapper.map(entity, DeviceTypeResponseDTO.class);
     }
 
     @Override
-    public List<DevicesTypeResponseDTO> getAll() {
+    public List<DeviceTypeResponseDTO> getAll() {
         return repository.findAllByIsDeletedFalse().stream().map(
-                type -> modelMapper.map(type, DevicesTypeResponseDTO.class)
+                type -> modelMapper.map(type, DeviceTypeResponseDTO.class)
         ).toList();
     }
 
     @Override
-    public DevicesTypeResponseDTO findById(String id) {
+    public DeviceTypeResponseDTO findById(String id) {
         DeviceTypeEntity entity = repository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("No se ha encontrado el tipo con id " + id));
-        return modelMapper.map(entity, DevicesTypeResponseDTO.class);
+        return modelMapper.map(entity, DeviceTypeResponseDTO.class);
     }
 
 
     @Override
-    public DevicesTypeResponseDTO findByName(String name) {
+    public DeviceTypeResponseDTO findByName(String name) {
         DeviceTypeEntity entity = repository.findByNameIgnoreCaseAndIsDeletedFalse(name).orElseThrow(
                 () -> new EntityNotFoundException("No se ha encontrado el tipo con nombre "+name));
-        return modelMapper.map(entity, DevicesTypeResponseDTO.class);
+        return modelMapper.map(entity, DeviceTypeResponseDTO.class);
     }
 
     @Override
-    public DevicesTypeResponseDTO update(String id, DevicesTypeSaveDTO type) {
+    public DeviceTypeResponseDTO update(String id, DeviceTypeSaveDTO type) {
         validateNameFormat(type.getName());
 
         DeviceTypeEntity entity = repository.findByIdAndIsDeletedFalse(id)
@@ -79,7 +79,7 @@ public class DeviceTypeServiceImpl implements IDeviceTypeService {
 
         repository.save(entity);
 
-        return modelMapper.map(entity, DevicesTypeResponseDTO.class);
+        return modelMapper.map(entity, DeviceTypeResponseDTO.class);
     }
 
     @Override
