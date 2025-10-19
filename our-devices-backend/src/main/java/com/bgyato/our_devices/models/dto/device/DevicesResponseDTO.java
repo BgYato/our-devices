@@ -12,11 +12,17 @@ import java.util.Date;
 public class DevicesResponseDTO {
     private String id;
     private String userId;
+    private String userName;
     private String deviceTypeName;
     private String name;
-    private String type;
+    private String customName;
+    private String hostname;
+    private String osName;
+    private String osVersion;
     private String ipAddress;
+    private String macAddress;
     private Integer batteryLevel;
+    private Boolean isOnline;
     private Date lastSeen;
     private String status;
 }

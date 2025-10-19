@@ -13,17 +13,15 @@ public interface IDeviceRepository extends JpaRepository<DeviceEntity, String> {
     // Todos los dispositivos de un usuario
     List<DeviceEntity> findAllByUserIdAndIsDeletedFalse(String userId);
 
-    // Buscar dispositivo específico por id
-    Optional<DeviceEntity> findByIdAndIsDeletedFalse(String id);
-
     // Buscar por nombre dentro de un usuario
     Optional<DeviceEntity> findByNameAndUserIdAndIsDeletedFalse(String name, String userId);
 
     // Verificar si un dispositivo ya existe para un usuario
     boolean existsByNameAndUserIdAndIsDeletedFalse(String name, String userId);
 
+    Optional<DeviceEntity> findByIdAndIsDeletedFalse(String id);
     List<DeviceEntity> findByUserIdAndIsDeletedFalse(String userId);
-    Optional<DeviceEntity> findByUser_IdAndNameIgnoreCase(String userId, String name);
     Optional<DeviceEntity> findByIpAddress(String ipAddress);
+    Optional<DeviceEntity> findByUser_IdAndNameIgnoreCase(String userId, String name);
 
 }

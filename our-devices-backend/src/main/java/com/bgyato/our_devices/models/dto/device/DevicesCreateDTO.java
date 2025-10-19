@@ -14,6 +14,9 @@ public class DevicesCreateDTO {
     private String deviceTypeId;
     private String name;
     private String customName;
-    private String type;
+    private String hostname;
+    private String osName;
+    private String osVersion;
     private String ipAddress;
+    private String macAddress;
 }

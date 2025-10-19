@@ -11,10 +11,10 @@ import java.util.Date;
 @AllArgsConstructor
 public class DevicesUpdateDTO {
     private String name;
-    private String deviceTypeId;
     private String customName;
-    private String type;
+    private String deviceTypeId;
     private String ipAddress;
-    private Date lastSeen;
     private Integer batteryLevel;
+    private Boolean isOnline;
+    private Date lastSeen;
 }

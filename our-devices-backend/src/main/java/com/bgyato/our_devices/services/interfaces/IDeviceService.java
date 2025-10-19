@@ -7,7 +7,6 @@ import com.bgyato.our_devices.models.dto.device.DevicesUpdateDTO;
 import java.util.List;
 
 public interface IDeviceService {
-
     DevicesResponseDTO saveDevice (DevicesCreateDTO devicesCreateDTO);
     DevicesResponseDTO updateDevice (DevicesUpdateDTO devicesUpdateDTO, String id);
     DevicesResponseDTO getDeviceById (String id);

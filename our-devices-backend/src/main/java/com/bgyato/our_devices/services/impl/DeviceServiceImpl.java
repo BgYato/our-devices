@@ -2,15 +2,9 @@ package com.bgyato.our_devices.services.impl;
 
 import com.bgyato.our_devices.exceptions.commons.EntityAlreadyExistsException;
 import com.bgyato.our_devices.exceptions.commons.EntityNotFoundException;
-import com.bgyato.our_devices.models.dto.device.DevicesCreateDTO;
-import com.bgyato.our_devices.models.dto.device.DevicesResponseDTO;
-import com.bgyato.our_devices.models.dto.device.DevicesUpdateDTO;
-import com.bgyato.our_devices.models.entities.DeviceEntity;
-import com.bgyato.our_devices.models.entities.DeviceTypeEntity;
-import com.bgyato.our_devices.models.entities.UserEntity;
-import com.bgyato.our_devices.repositories.IDeviceRepository;
-import com.bgyato.our_devices.repositories.IDeviceTypeRepository;
-import com.bgyato.our_devices.repositories.IUserRepository;
+import com.bgyato.our_devices.models.dto.device.*;
+import com.bgyato.our_devices.models.entities.*;
+import com.bgyato.our_devices.repositories.*;
 import com.bgyato.our_devices.services.interfaces.IDeviceService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,9 +41,15 @@ public class DeviceServiceImpl implements IDeviceService {
                 .deviceType(deviceType)
                 .name(dto.getName())
                 .customName(dto.getCustomName())
+                .hostname(dto.getHostname())
+                .osName(dto.getOsName())
+                .osVersion(dto.getOsVersion())
                 .ipAddress(dto.getIpAddress())
+                .macAddress(dto.getMacAddress())
+                .isOnline(false)
                 .isDeleted(false)
                 .dateCreation(new Date())
+                .lastSeen(new Date())
                 .build();
 
         device = deviceRepository.save(device);
@@ -71,6 +71,7 @@ public class DeviceServiceImpl implements IDeviceService {
         if (dto.getIpAddress() != null) device.setIpAddress(dto.getIpAddress());
         if (dto.getBatteryLevel() != null) device.setBatteryLevel(dto.getBatteryLevel());
         if (dto.getLastSeen() != null) device.setLastSeen(dto.getLastSeen());
+        if (dto.getIsOnline() != null) device.setOnline(dto.getIsOnline());
 
         if (dto.getDeviceTypeId() != null) {
             DeviceTypeEntity type = deviceTypeRepository.findById(dto.getDeviceTypeId())
@@ -115,11 +116,17 @@ public class DeviceServiceImpl implements IDeviceService {
         return new DevicesResponseDTO(
                 device.getId(),
                 device.getUser().getId(),
+                device.getUser().getFirstName() + " " + device.getUser().getLastName(),
+                device.getDeviceType() != null ? device.getDeviceType().getName() : "Desconocido",
                 device.getName(),
                 device.getCustomName(),
-                device.getDeviceType() != null ? device.getDeviceType().getName() : "Desconocido",
+                device.getHostname(),
+                device.getOsName(),
+                device.getOsVersion(),
                 device.getIpAddress(),
+                device.getMacAddress(),
                 device.getBatteryLevel(),
+                device.isOnline(),
                 device.getLastSeen(),
                 status
         );
