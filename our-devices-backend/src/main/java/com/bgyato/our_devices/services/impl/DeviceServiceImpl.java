@@ -6,9 +6,11 @@ import com.bgyato.our_devices.models.dto.device.*;
 import com.bgyato.our_devices.models.entities.*;
 import com.bgyato.our_devices.repositories.*;
 import com.bgyato.our_devices.services.interfaces.IDeviceService;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -57,6 +59,7 @@ public class DeviceServiceImpl implements IDeviceService {
     }
 
     @Override
+    @Transactional
     public DevicesResponseDTO updateDevice(DevicesUpdateDTO dto, String id) {
         DeviceEntity device = deviceRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado con ID: " + id));
@@ -84,6 +87,7 @@ public class DeviceServiceImpl implements IDeviceService {
     }
 
     @Override
+    @Transactional
     public DevicesResponseDTO getDeviceById(String id) {
         DeviceEntity device = deviceRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado con ID: " + id));
@@ -91,6 +95,7 @@ public class DeviceServiceImpl implements IDeviceService {
     }
 
     @Override
+    @Transactional
     public List<DevicesResponseDTO> getDevicesByUserId(String userId) {
         return deviceRepository.findByUserIdAndIsDeletedFalse(userId)
                 .stream()
@@ -99,6 +104,7 @@ public class DeviceServiceImpl implements IDeviceService {
     }
 
     @Override
+    @Transactional
     public void deleteDevice(String id) {
         DeviceEntity device = deviceRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado con ID: " + id));
@@ -112,6 +118,8 @@ public class DeviceServiceImpl implements IDeviceService {
             long diff = new Date().getTime() - device.getLastSeen().getTime();
             if (diff < 2 * 60 * 1000) status = "online";
         }
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
         return new DevicesResponseDTO(
                 device.getId(),
@@ -127,7 +135,7 @@ public class DeviceServiceImpl implements IDeviceService {
                 device.getMacAddress(),
                 device.getBatteryLevel(),
                 device.isOnline(),
-                device.getLastSeen(),
+                device.getLastSeen() != null ? formatter.format(device.getLastSeen()) : null, // 👈 formateado
                 status
         );
     }

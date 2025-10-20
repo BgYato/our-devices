@@ -23,6 +23,6 @@ public class DevicesResponseDTO {
     private String macAddress;
     private Integer batteryLevel;
     private Boolean isOnline;
-    private Date lastSeen;
+    private String lastSeen;
     private String status;
 }
