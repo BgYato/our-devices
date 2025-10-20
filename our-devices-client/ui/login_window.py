@@ -1,29 +1,50 @@
 from PyQt6.QtWidgets import (
-    QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox
+    QWidget,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMessageBox,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtGui import QFont
+
 
 class LoginWindow(QWidget):
-    logged_in = pyqtSignal(dict, str)  # (user, token)
+    logged_in = pyqtSignal(dict, str)
 
     def __init__(self, auth_service):
         super().__init__()
         self.auth_service = auth_service
         self.setWindowTitle("OurDevices - Login")
-        self.setMinimumWidth(360)
-        self.setStyleSheet("""
-            QWidget { background-color: #0f172a; color: #e5e7eb; }
-            QLineEdit { background:#111827; border:1px solid #334155; border-radius:8px; padding:8px; color:#e5e7eb; }
-            QPushButton { background:#3b82f6; border:none; border-radius:8px; padding:10px; color:white; }
-            QPushButton:hover { background:#60a5fa; }
-            QLabel.h1 { color:#93c5fd; font-size:20px; font-weight:600; }
-            QLabel.muted { color:#94a3b8; }
-        """)
+        self.resize(960, 540)  # 🔥 Tamaño más amplio, buena relación 16:9
+        self.setMinimumSize(900, 520)
 
-        self.title = QLabel("Our Devices")
-        self.title.setObjectName("title")
-        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.title.setStyleSheet("QLabel { color:#93c5fd; font-size:24px; font-weight:700; }")
+        # Cargar estilos externos
+        with open("assets/styles/login.qss", "r", encoding="utf-8") as f:
+            self.setStyleSheet(f.read())
+
+        # Panel Izquierdo (logo/nombre)
+        self.left_panel = QWidget()
+        left_layout = QVBoxLayout()
+        left_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        title = QLabel("OurDevices")
+        title.setObjectName("logoTitle")
+        subtitle = QLabel("Controla y gestiona tus dispositivos con facilidad 🚀")
+        subtitle.setObjectName("logoSubtitle")
+        subtitle.setWordWrap(True)
+
+        left_layout.addWidget(title)
+        left_layout.addSpacing(8)
+        left_layout.addWidget(subtitle)
+        self.left_panel.setLayout(left_layout)
+
+        # Panel Derecho (login form)
+        self.right_panel = QWidget()
+        form_layout = QVBoxLayout()
+        form_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self.lbl_id = QLabel("Correo o usuario")
         self.input_id = QLineEdit()
@@ -36,30 +57,28 @@ class LoginWindow(QWidget):
 
         self.btn = QPushButton("Iniciar sesión")
         self.btn.clicked.connect(self.handle_login)
+        self.btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        self.loading = QLabel("")  # “spinner” simple
+        self.loading = QLabel("")
         self.loading.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.loading.setProperty("class", "muted")
 
-        form = QVBoxLayout()
-        form.addWidget(self.title)
-        form.addSpacing(12)
-        form.addWidget(self.lbl_id)
-        form.addWidget(self.input_id)
-        form.addWidget(self.lbl_pw)
-        form.addWidget(self.input_pw)
-        form.addSpacing(8)
-        form.addWidget(self.btn)
-        form.addSpacing(8)
-        form.addWidget(self.loading)
+        form_layout.addWidget(self.lbl_id)
+        form_layout.addWidget(self.input_id)
+        form_layout.addWidget(self.lbl_pw)
+        form_layout.addWidget(self.input_pw)
+        form_layout.addSpacing(10)
+        form_layout.addWidget(self.btn)
+        form_layout.addSpacing(8)
+        form_layout.addWidget(self.loading)
+        self.right_panel.setLayout(form_layout)
 
-        wrap = QHBoxLayout()
-        wrap.addStretch()
-        wrap.addLayout(form)
-        wrap.addStretch()
+        # Layout general
+        layout = QHBoxLayout()
+        layout.addWidget(self.left_panel, 2)
+        layout.addWidget(self.right_panel, 3)
+        self.setLayout(layout)
 
-        self.setLayout(wrap)
-
+    # ----
     def set_loading(self, is_loading: bool):
         self.input_id.setDisabled(is_loading)
         self.input_pw.setDisabled(is_loading)
@@ -75,19 +94,10 @@ class LoginWindow(QWidget):
 
         try:
             self.set_loading(True)
-
-            # 1. Login y obtener token
             token = self.auth_service.login(identifier, password)
-
-            # 2. Llamar a /me con ese token
             user = self.auth_service.me()
-
             self.set_loading(False)
-
-            # 3. Emitir ambos (user, token)
             self.logged_in.emit(user, token)
-
         except Exception as e:
             self.set_loading(False)
             QMessageBox.critical(self, "Error", f"No se pudo iniciar sesión.\n{e}")
-

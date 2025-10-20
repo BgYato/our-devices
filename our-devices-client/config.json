@@ -4,7 +4,10 @@
     "login": "/auth/login",
     "me": "/users/me",
     "devices_by_user": "/devices/by-user",
-    "update_device": "/devices"
+    "update_device": "/devices",
+    "get_specs": "/device-specs/{deviceId}",
+    "register_device": "/devices",
+    "register_specs": "/device-specs"
   },
   "app_name": "OurDevices"
 }

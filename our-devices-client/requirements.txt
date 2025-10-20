@@ -2,3 +2,6 @@ PyQt6
 requests
 psutil
 appdirs
+psutil
+screeninfo
+wmi

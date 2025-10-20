@@ -1,0 +1,68 @@
+/* Estilos para dashboard */
+QWidget {
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-size: 14px;
+}
+
+#navbar {
+    background: #0b1220;
+    border-bottom: 1px solid #1e293b;
+}
+
+QLabel#userInfo {
+    color: #cbd5e1;
+    font-weight: 500;
+    line-height: 1.3em;
+}
+
+QPushButton#iconBtn {
+    background: #1e293b;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #cbd5e1;
+}
+
+QPushButton#iconBtn:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
+QPushButton#logoutBtn {
+    background: #ef4444;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: white;
+}
+
+QPushButton#logoutBtn:hover {
+    background: #f87171;
+}
+
+QLabel#sectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #93c5fd;
+    margin-left: 10px;
+    margin-bottom: 8px;
+}
+
+QListWidget#deviceList {
+    background: #111827;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 8px;
+}
+
+QListWidget::item {
+    padding: 10px;
+    border-bottom: 1px solid #1e293b;
+}
+
+QListWidget::item:selected {
+    background: #1e3a8a;
+    border-radius: 6px;
+}

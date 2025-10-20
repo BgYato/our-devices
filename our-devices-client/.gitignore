@@ -1,0 +1,13 @@
+# Virtual environments
+venv/
+.env
+
+# PyCache
+__pycache__/
+*.pyc
+*.pyo
+
+# otross
+.DS_Store
+.idea/
+.vscode/
