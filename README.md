@@ -87,4 +87,13 @@ Cada módulo tiene su propio archivo de configuración:
 
 ---
 
+## ❗ Datos técnicos
+- El cliente Python guardará de forma local en la máquina un archivo `.txt` almacenando un UUID único del equipo en las siguientes rutas:
+  - **Windows:** `C:\Users\Usuario\AppData\Roaming\OurDevices\device_id.txt`
+  - **macOS:** `/Users/usuario/Library/Application Support/OurDevices/device_id.txt`
+  - **Linux:** `/home/usuario/.config/OurDevices/device_id.txt`
+  <p> Esté archivo es importante para el registro y toma de información de especificaciones de la máquina. </p>
+
+---
+
 Hecho con ❤️ por Andres Yate
