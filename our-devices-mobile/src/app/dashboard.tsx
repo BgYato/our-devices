@@ -260,24 +260,36 @@ export default function DashboardRoute() {
   const [errorMessage, setErrorMessage] = useState("");
   const [locationMessage, setLocationMessage] = useState("");
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(false);
-  const [locationPreferenceLoaded, setLocationPreferenceLoaded] = useState(false);
+  const [locationPreferenceUserId, setLocationPreferenceUserId] = useState<string | null>(null);
+  const locationPreferenceLoaded = Boolean(user && locationPreferenceUserId === user.id);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const syncInProgress = useRef(false);
   const mobileDeviceId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    setLocationPreferenceLoaded(false);
+    let active = true;
     SecureStore.getItemAsync(`${LOCATION_KEY_PREFIX}${user.id}`)
-      .then((value) => setLocationSharingEnabled(value === "true"))
+      .then((value) => {
+        if (!active) return;
+        setLocationSharingEnabled(value === "true");
+        setLocationPreferenceUserId(user.id);
+      })
       .catch((error: unknown) => {
+        if (!active) return;
+        setLocationSharingEnabled(false);
         setErrorMessage(
           error instanceof Error
             ? `No se pudo leer la preferencia de ubicación: ${error.message}`
             : "No se pudo leer la preferencia de ubicación.",
         );
       })
-      .finally(() => setLocationPreferenceLoaded(true));
+      .finally(() => {
+        if (active) setLocationPreferenceUserId(user.id);
+      });
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   const syncDevices = useCallback(async () => {
