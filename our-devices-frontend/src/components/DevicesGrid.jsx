@@ -2,12 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeviceCard from "./DeviceCard";
 import DeviceFormModal from "./DeviceFormModal";
-import DeviceDetailsModal from "./DeviceDetailsModal";
 
 function DevicesGrid({ devices, onDeviceSaved, onDeviceDeleted }) {
   const navigate = useNavigate();
   const [formDevice, setFormDevice] = useState(null);
-  const [detailsDevice, setDetailsDevice] = useState(null);
 
   return (
     <>
@@ -16,7 +14,6 @@ function DevicesGrid({ devices, onDeviceSaved, onDeviceDeleted }) {
           <DeviceCard
             key={device.id}
             device={device}
-            onShowDetails={setDetailsDevice}
             onShowLocation={(selectedDevice) =>
               navigate(`/dashboard/devices/${selectedDevice.id}/location`)
             }
@@ -33,12 +30,6 @@ function DevicesGrid({ devices, onDeviceSaved, onDeviceDeleted }) {
           device={formDevice}
           onDeviceSaved={onDeviceSaved}
           onClose={() => setFormDevice(null)}
-        />
-      )}
-      {detailsDevice && (
-        <DeviceDetailsModal
-          device={detailsDevice}
-          onClose={() => setDetailsDevice(null)}
         />
       )}
     </>

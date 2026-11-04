@@ -239,8 +239,8 @@ export default function DeviceLocation() {
           </p>
         ) : null}
 
-        <section className="grid flex-1 gap-3 lg:min-h-[calc(100vh-190px)] lg:grid-cols-[250px_minmax(0,1fr)_320px]">
-          <aside className="max-h-[36vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900/80 p-3 lg:max-h-none">
+        <section className="grid flex-1 gap-3 lg:h-[calc(100vh-190px)] lg:min-h-0 lg:flex-none lg:grid-cols-[250px_minmax(0,1fr)_320px]">
+          <aside className="min-h-0 max-h-[36vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900/80 p-3 lg:max-h-none">
             <div className="mb-4 px-1">
               <h2 className="text-sm font-semibold text-white">Dispositivos</h2>
               <p className="mt-1 text-xs text-slate-500">Selecciona un equipo para ver su estado.</p>
@@ -326,7 +326,7 @@ export default function DeviceLocation() {
             ) : null}
           </section>
 
-          <aside className="max-h-[52vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900/80 p-4 lg:max-h-none">
+          <aside className="min-h-0 max-h-[52vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900/80 p-4 lg:max-h-none">
             {device ? (
               <>
                 <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
