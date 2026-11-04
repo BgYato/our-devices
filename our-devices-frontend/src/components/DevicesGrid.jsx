@@ -1,18 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DeviceCard from "./DeviceCard";
-import AddDeviceCard from "./AddDeviceCard";
 import DeviceFormModal from "./DeviceFormModal";
 import DeviceDetailsModal from "./DeviceDetailsModal";
 
 function DevicesGrid({ devices, onDeviceSaved, onDeviceDeleted }) {
+  const navigate = useNavigate();
   const [formDevice, setFormDevice] = useState(null);
-  const [showForm, setShowForm] = useState(false);
   const [detailsDevice, setDetailsDevice] = useState(null);
-
-  const openNewDeviceForm = () => {
-    setFormDevice(null);
-    setShowForm(true);
-  };
 
   return (
     <>
@@ -22,21 +17,22 @@ function DevicesGrid({ devices, onDeviceSaved, onDeviceDeleted }) {
             key={device.id}
             device={device}
             onShowDetails={setDetailsDevice}
+            onShowLocation={(selectedDevice) =>
+              navigate(`/dashboard/devices/${selectedDevice.id}/location`)
+            }
             onEdit={(selectedDevice) => {
               setFormDevice(selectedDevice);
-              setShowForm(true);
             }}
             onDelete={onDeviceDeleted}
           />
         ))}
-        <AddDeviceCard onOpen={openNewDeviceForm} />
       </div>
 
-      {showForm && (
+      {formDevice && (
         <DeviceFormModal
           device={formDevice}
           onDeviceSaved={onDeviceSaved}
-          onClose={() => setShowForm(false)}
+          onClose={() => setFormDevice(null)}
         />
       )}
       {detailsDevice && (

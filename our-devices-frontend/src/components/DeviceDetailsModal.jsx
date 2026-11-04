@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getDeviceSpecs } from "../service/deviceService";
 
 function Info({ label, value }) {
@@ -153,36 +154,17 @@ function DeviceDetailsModal({ device, onClose }) {
           )}
         </section>
 
-        {telemetry?.latitude != null && telemetry.longitude != null ? (
-          <section className="mt-7">
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-blue-300">
-              Última ubicación compartida
-            </h3>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-              <div>
-                <p className="text-sm text-slate-200">
-                  {telemetry.latitude.toFixed(5)}, {telemetry.longitude.toFixed(5)}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {telemetry.locationCapturedAt
-                    ? `Registrada: ${new Date(telemetry.locationCapturedAt).toLocaleString()}`
-                    : "Fecha no disponible"}
-                  {telemetry.locationAccuracyMeters != null
-                    ? ` · Precisión aproximada: ${Math.round(telemetry.locationAccuracyMeters)} m`
-                    : ""}
-                </p>
-              </div>
-              <a
-                href={`https://www.google.com/maps?q=${telemetry.latitude},${telemetry.longitude}`}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/20"
-              >
-                Ver en el mapa
-              </a>
-            </div>
-          </section>
-        ) : null}
+        <section className="mt-7">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-blue-300">
+            Ubicación y datos
+          </h3>
+          <Link
+            to={`/dashboard/devices/${device.id}/location`}
+            className="inline-flex rounded-lg bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/20"
+          >
+            Abrir mapa y datos del dispositivo
+          </Link>
+        </section>
 
         <section className="mt-7">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-blue-300">

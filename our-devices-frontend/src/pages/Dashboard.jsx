@@ -87,12 +87,9 @@ function Dashboard() {
   };
 
   const handleDeviceSaved = (savedDevice) => {
-    setDevices((current) => {
-      const exists = current.some((device) => device.id === savedDevice.id);
-      return exists
-        ? current.map((device) => (device.id === savedDevice.id ? savedDevice : device))
-        : [savedDevice, ...current];
-    });
+    setDevices((current) =>
+      current.map((device) => (device.id === savedDevice.id ? savedDevice : device))
+    );
   };
 
   const handleDeviceDeleted = async (device) => {

@@ -12,16 +12,6 @@ export const getDevices = async () => {
   }
 };
 
-export const addDevice = async (deviceData) => {
-  try {
-    const response = await axiosInstance.post(`${API_URL}/devices`, deviceData);
-    return response.data;
-  } catch (error) {
-    console.error("Error agregando device:", error);
-    throw error;
-  }
-};
-
 export const updateDevice = async (deviceId, deviceData) => {
   try {
     const response = await axiosInstance.put(`${API_URL}/devices`, deviceData, {

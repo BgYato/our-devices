@@ -28,7 +28,7 @@ function MetricBar({ label, value, color = "bg-blue-400" }) {
   );
 }
 
-function DeviceCard({ device, onShowDetails, onEdit, onDelete }) {
+function DeviceCard({ device, onShowDetails, onShowLocation, onEdit, onDelete }) {
   const telemetry = device.telemetry;
   const online = device.status ? device.status === "online" : device.isOnline;
   const battery = telemetry?.batteryLevel ?? device.batteryLevel;
@@ -113,6 +113,13 @@ function DeviceCard({ device, onShowDetails, onEdit, onDelete }) {
           className="flex-1 rounded-lg bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-300 transition hover:bg-blue-500/20"
         >
           Ver detalles
+        </button>
+        <button
+          type="button"
+          onClick={() => onShowLocation(device)}
+          className="rounded-lg border border-cyan-800/70 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-950/50"
+        >
+          Mapa y datos
         </button>
         <button
           type="button"
