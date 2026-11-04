@@ -127,13 +127,14 @@ class SystemInfo:
             battery = psutil.sensors_battery()
         except (AttributeError, NotImplementedError, OSError, RuntimeError):
             battery = None
-        _, free_storage = SystemInfo.get_storage_info()
+        total_storage, free_storage = SystemInfo.get_storage_info()
         return {
             "ipAddress": SystemInfo.get_ip_address(),
             "batteryLevel": round(battery.percent) if battery is not None else None,
             "cpuUsagePercent": psutil.cpu_percent(interval=0.1),
             "memoryUsagePercent": psutil.virtual_memory().percent,
             "freeStorageMB": free_storage,
+            "totalStorageMB": total_storage,
         }
 
     @staticmethod

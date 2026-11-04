@@ -5,3 +5,4 @@ appdirs
 psutil
 screeninfo
 wmi
+winrt-Windows.Devices.Geolocation>=4!10.0.28000.2957; sys_platform == "win32"

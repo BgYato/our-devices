@@ -2,6 +2,7 @@ import logging
 import requests
 from typing import Any
 from services.api import ApiClient
+from services.location import LocationService, LocationUnavailableError
 
 
 class DevicesService:
@@ -64,12 +65,36 @@ class DevicesService:
         logging.info("Actualizando el tipo de dispositivo %s", device_id)
         return self.api.put(endpoint, device_data, params={"id": device_id})
 
-    def send_heartbeat(self, device_id: str) -> dict[str, Any]:
+    def send_heartbeat(
+        self, device_id: str, share_location: bool = False
+    ) -> dict[str, Any]:
         from utils.system_info import SystemInfo
 
         endpoint = self.endpoints["heartbeat_device"].replace("{deviceId}", device_id)
         logging.info("Enviando heartbeat y telemetría del equipo.")
-        return self.api.post(endpoint, SystemInfo.get_telemetry())
+        telemetry = SystemInfo.get_telemetry()
+        telemetry["locationSharingEnabled"] = share_location
+        telemetry["latitude"] = None
+        telemetry["longitude"] = None
+        telemetry["locationAccuracyMeters"] = None
+        location_warning = None
+        if share_location:
+            try:
+                location = LocationService.get_current_location()
+                telemetry["latitude"] = location["latitude"]
+                telemetry["longitude"] = location["longitude"]
+                telemetry["locationAccuracyMeters"] = location["accuracyMeters"]
+            except LocationUnavailableError as error:
+                logging.warning("No se pudo actualizar la ubicación: %s", error)
+                location_warning = str(error)
+                telemetry["latitude"] = None
+                telemetry["longitude"] = None
+                telemetry["locationAccuracyMeters"] = None
+
+        response = self.api.post(endpoint, telemetry)
+        if location_warning and isinstance(response, dict):
+            response["_locationWarning"] = location_warning
+        return response
 
     def disconnect_device(self, device_id: str) -> None:
         endpoint = self.endpoints["disconnect_device"].replace("{deviceId}", device_id)

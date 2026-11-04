@@ -1,4 +1,6 @@
 import logging
+import platform
+from threading import Event
 
 from PyQt6.QtWidgets import (
     QWidget,
@@ -10,10 +12,12 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QFrame,
     QProgressBar,
+    QCheckBox,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSettings
 from services.update_service import UpdateService
 from services.device_specs_service import DeviceSpecsService
+from services.location import LocationService, LocationUnavailableError
 
 
 class DashboardWindow(QWidget):
@@ -34,6 +38,14 @@ class DashboardWindow(QWidget):
         self.selected_device_id = None
         self.on_logout = on_logout
         self.update_service = None
+        self.location_sharing = Event()
+        self.settings = QSettings("OurDevices", "OurDevicesClient")
+        self.location_setting_key = f"locationSharing/{self.user.get('id', 'default')}"
+        if self.settings.value(self.location_setting_key, False, type=bool):
+            self.location_sharing.set()
+        if platform.system() != "Windows":
+            self.location_sharing.clear()
+            self.settings.setValue(self.location_setting_key, False)
 
         self.setWindowTitle("OurDevices - Dashboard")
         self.resize(1080, 640)
@@ -137,6 +149,32 @@ class DashboardWindow(QWidget):
         """
         )
         details_layout.addWidget(self.details_card, 2)
+
+        self.location_checkbox = QCheckBox("Compartir ubicación de este PC")
+        self.location_checkbox.setChecked(self.location_sharing.is_set())
+        self.location_checkbox.setToolTip(
+            "Solo se obtiene y comparte la ubicación cuando esta opción está activada."
+        )
+        if platform.system() != "Windows":
+            self.location_checkbox.setEnabled(False)
+            self.location_status = QLabel(
+                "La ubicación nativa del cliente de escritorio está disponible actualmente en Windows."
+            )
+        elif not self.device_id:
+            self.location_checkbox.setEnabled(False)
+            self.location_status = QLabel(
+                "Registra este equipo en tu cuenta para poder compartir su ubicación."
+            )
+        else:
+            self.location_status = QLabel(
+                "La ubicación no se comparte."
+                if not self.location_sharing.is_set()
+                else "Ubicación activada. Verificando el servicio de Windows..."
+            )
+        self.location_status.setWordWrap(True)
+        details_layout.addWidget(self.location_checkbox)
+        details_layout.addWidget(self.location_status)
+        self.location_checkbox.toggled.connect(self.set_location_sharing)
 
         metrics_title = QLabel("Uso actual")
         metrics_title.setObjectName("sectionTitle")
@@ -284,13 +322,40 @@ class DashboardWindow(QWidget):
             self.devices_service,
             self.device_id,
             interval=10000,
+            location_sharing=self.location_sharing,
             parent=self,
         )
         self.update_service.heartbeat_received.connect(self.apply_heartbeat)
+        self.update_service.location_status.connect(self.location_status.setText)
         self.update_service.update_failed.connect(
             lambda error: logging.error("Fallo en el heartbeat: %s", error)
         )
         self.update_service.start()
+
+    def set_location_sharing(self, enabled: bool):
+        if enabled:
+            try:
+                LocationService.request_access()
+            except LocationUnavailableError as error:
+                self.location_checkbox.blockSignals(True)
+                self.location_checkbox.setChecked(False)
+                self.location_checkbox.blockSignals(False)
+                self.location_sharing.clear()
+                self.settings.setValue(self.location_setting_key, False)
+                self.location_status.setText(str(error))
+                return
+
+            self.location_sharing.set()
+            self.location_status.setText(
+                "Ubicación activada. Se actualizará mientras el cliente esté abierto."
+            )
+        else:
+            self.location_sharing.clear()
+            self.location_status.setText(
+                "Ubicación desactivada. La posición guardada se eliminará al sincronizar."
+            )
+
+        self.settings.setValue(self.location_setting_key, enabled)
 
     def closeEvent(self, event):
         if self.update_service:
