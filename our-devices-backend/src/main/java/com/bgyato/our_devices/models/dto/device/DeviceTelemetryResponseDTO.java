@@ -14,5 +14,12 @@ public class DeviceTelemetryResponseDTO {
     private Double cpuUsagePercent;
     private Double memoryUsagePercent;
     private Long freeStorageMB;
+    private Long totalStorageMB;
+    private Long totalMemoryMB;
+    private Double latitude;
+    private Double longitude;
+    private Double locationAccuracyMeters;
+    private Instant locationCapturedAt;
+    private Boolean locationSharingEnabled;
     private Instant capturedAt;
 }

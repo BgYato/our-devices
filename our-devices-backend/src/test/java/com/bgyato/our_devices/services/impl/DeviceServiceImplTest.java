@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.Date;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -65,13 +66,21 @@ class DeviceServiceImplTest {
         when(telemetryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(deviceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        DeviceHeartbeatDTO heartbeat = new DeviceHeartbeatDTO(
-                "192.168.1.50", 81, 24.5, 48.0, 512000L);
+        DeviceHeartbeatDTO heartbeat = new DeviceHeartbeatDTO();
+        heartbeat.setIpAddress("192.168.1.50");
+        heartbeat.setBatteryLevel(81);
+        heartbeat.setCpuUsagePercent(24.5);
+        heartbeat.setMemoryUsagePercent(48.0);
+        heartbeat.setFreeStorageMB(512000L);
         DevicesResponseDTO response = service.heartbeat(heartbeat, "device-1", "owner@example.com");
+        DeviceHeartbeatDTO nextHeartbeat = new DeviceHeartbeatDTO();
+        nextHeartbeat.setIpAddress("192.168.1.51");
+        nextHeartbeat.setBatteryLevel(75);
+        nextHeartbeat.setCpuUsagePercent(12.0);
+        nextHeartbeat.setMemoryUsagePercent(40.0);
+        nextHeartbeat.setFreeStorageMB(400000L);
         DevicesResponseDTO latestResponse = service.heartbeat(
-                new DeviceHeartbeatDTO("192.168.1.51", 75, 12.0, 40.0, 400000L),
-                "device-1",
-                "owner@example.com");
+                nextHeartbeat, "device-1", "owner@example.com");
 
         assertTrue(response.getIsOnline());
         assertNotNull(response.getLastSeen());
@@ -84,6 +93,89 @@ class DeviceServiceImplTest {
         assertEquals(400000L, latestResponse.getTelemetry().getFreeStorageMB());
         assertNotNull(latestResponse.getTelemetry().getCapturedAt());
         verify(telemetryRepository, times(2)).save(any(DeviceTelemetryEntity.class));
+    }
+
+    @Test
+    void heartbeatStoresMobileStorageAndOptInLocation() {
+        DeviceEntity device = deviceOwnedBy("owner@example.com");
+        when(deviceRepository.findByIdAndIsDeletedFalse("device-1")).thenReturn(Optional.of(device));
+        when(telemetryRepository.findByDevice_Id("device-1")).thenReturn(Optional.empty());
+        when(telemetryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(deviceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        DeviceHeartbeatDTO heartbeat = new DeviceHeartbeatDTO();
+        heartbeat.setFreeStorageMB(128000L);
+        heartbeat.setTotalStorageMB(512000L);
+        heartbeat.setTotalMemoryMB(8192L);
+        heartbeat.setLatitude(4.7110);
+        heartbeat.setLongitude(-74.0721);
+        heartbeat.setLocationAccuracyMeters(12.5);
+        heartbeat.setLocationSharingEnabled(true);
+
+        DevicesResponseDTO response = service.heartbeat(heartbeat, "device-1", "owner@example.com");
+
+        assertEquals(128000L, response.getTelemetry().getFreeStorageMB());
+        assertEquals(512000L, response.getTelemetry().getTotalStorageMB());
+        assertEquals(8192L, response.getTelemetry().getTotalMemoryMB());
+        assertEquals(4.7110, response.getTelemetry().getLatitude());
+        assertEquals(-74.0721, response.getTelemetry().getLongitude());
+        assertEquals(12.5, response.getTelemetry().getLocationAccuracyMeters());
+        assertTrue(response.getTelemetry().getLocationSharingEnabled());
+        assertNotNull(response.getTelemetry().getLocationCapturedAt());
+    }
+
+    @Test
+    void disablingLocationSharingClearsPreviouslyStoredCoordinates() {
+        DeviceEntity device = deviceOwnedBy("owner@example.com");
+        DeviceTelemetryEntity currentTelemetry = DeviceTelemetryEntity.builder()
+                .id("telemetry-1")
+                .device(device)
+                .latitude(4.7110)
+                .longitude(-74.0721)
+                .locationAccuracyMeters(12.5)
+                .locationCapturedAt(Instant.now())
+                .locationSharingEnabled(true)
+                .build();
+        when(deviceRepository.findByIdAndIsDeletedFalse("device-1")).thenReturn(Optional.of(device));
+        when(telemetryRepository.findByDevice_Id("device-1")).thenReturn(Optional.of(currentTelemetry));
+        when(telemetryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(deviceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        DeviceHeartbeatDTO heartbeat = new DeviceHeartbeatDTO();
+        heartbeat.setLocationSharingEnabled(false);
+
+        DevicesResponseDTO response = service.heartbeat(heartbeat, "device-1", "owner@example.com");
+
+        assertFalse(response.getTelemetry().getLocationSharingEnabled());
+        assertNull(response.getTelemetry().getLatitude());
+        assertNull(response.getTelemetry().getLongitude());
+        assertNull(response.getTelemetry().getLocationCapturedAt());
+    }
+
+    @Test
+    void staleDeviceHeartbeatIsReportedOffline() {
+        DeviceEntity device = deviceOwnedBy("owner@example.com");
+        device.setOnline(true);
+        device.setLastSeen(Date.from(Instant.now().minusSeconds(91)));
+        when(deviceRepository.findByIdAndIsDeletedFalse("device-1")).thenReturn(Optional.of(device));
+
+        DevicesResponseDTO response = service.getDeviceById("device-1", "owner@example.com");
+
+        assertFalse(response.getIsOnline());
+        assertEquals("offline", response.getStatus());
+    }
+
+    @Test
+    void disconnectImmediatelyMarksDeviceOffline() {
+        DeviceEntity device = deviceOwnedBy("owner@example.com");
+        device.setOnline(true);
+        when(deviceRepository.findByIdAndIsDeletedFalse("device-1")).thenReturn(Optional.of(device));
+        when(deviceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.disconnect("device-1", "owner@example.com");
+
+        assertFalse(device.isOnline());
+        verify(deviceRepository).save(device);
     }
 
     @Test

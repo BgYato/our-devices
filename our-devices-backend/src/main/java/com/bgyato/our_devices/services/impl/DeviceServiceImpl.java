@@ -104,6 +104,22 @@ public class DeviceServiceImpl implements IDeviceService {
         telemetry.setCpuUsagePercent(heartbeat.getCpuUsagePercent());
         telemetry.setMemoryUsagePercent(heartbeat.getMemoryUsagePercent());
         telemetry.setFreeStorageMB(heartbeat.getFreeStorageMB());
+        telemetry.setTotalStorageMB(heartbeat.getTotalStorageMB());
+        telemetry.setTotalMemoryMB(heartbeat.getTotalMemoryMB());
+        if (heartbeat.getLocationSharingEnabled() != null) {
+            telemetry.setLocationSharingEnabled(heartbeat.getLocationSharingEnabled());
+            if (!heartbeat.getLocationSharingEnabled()) {
+                telemetry.setLatitude(null);
+                telemetry.setLongitude(null);
+                telemetry.setLocationAccuracyMeters(null);
+                telemetry.setLocationCapturedAt(null);
+            } else if (heartbeat.getLatitude() != null && heartbeat.getLongitude() != null) {
+                telemetry.setLatitude(heartbeat.getLatitude());
+                telemetry.setLongitude(heartbeat.getLongitude());
+                telemetry.setLocationAccuracyMeters(heartbeat.getLocationAccuracyMeters());
+                telemetry.setLocationCapturedAt(now);
+            }
+        }
         telemetry.setCapturedAt(now);
         device.setTelemetry(telemetry);
         telemetryRepository.save(telemetry);
@@ -213,6 +229,13 @@ public class DeviceServiceImpl implements IDeviceService {
                         device.getTelemetry().getCpuUsagePercent(),
                         device.getTelemetry().getMemoryUsagePercent(),
                         device.getTelemetry().getFreeStorageMB(),
+                        device.getTelemetry().getTotalStorageMB(),
+                        device.getTelemetry().getTotalMemoryMB(),
+                        device.getTelemetry().getLatitude(),
+                        device.getTelemetry().getLongitude(),
+                        device.getTelemetry().getLocationAccuracyMeters(),
+                        device.getTelemetry().getLocationCapturedAt(),
+                        device.getTelemetry().getLocationSharingEnabled(),
                         device.getTelemetry().getCapturedAt());
 
         return new DevicesResponseDTO(
