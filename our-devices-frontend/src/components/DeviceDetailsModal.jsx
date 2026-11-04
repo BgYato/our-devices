@@ -138,6 +138,8 @@ function DeviceDetailsModal({ device, onClose }) {
               <MetricBar label="Batería" value={telemetry.batteryLevel} color="bg-emerald-400" />
               <dl className="col-span-full grid gap-3 sm:grid-cols-2">
                 <Info label="Almacenamiento libre" value={formatStorage(telemetry.freeStorageMB)} />
+                <Info label="Almacenamiento total" value={formatStorage(telemetry.totalStorageMB)} />
+                <Info label="Memoria RAM total" value={formatStorage(telemetry.totalMemoryMB)} />
                 <Info
                   label="Telemetría actualizada"
                   value={telemetry.capturedAt ? new Date(telemetry.capturedAt).toLocaleString() : null}
@@ -146,10 +148,41 @@ function DeviceDetailsModal({ device, onClose }) {
             </div>
           ) : (
             <p className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
-              Aún no hay métricas reportadas por el agente de escritorio.
+              Aún no hay métricas reportadas por este dispositivo.
             </p>
           )}
         </section>
+
+        {telemetry?.latitude != null && telemetry.longitude != null ? (
+          <section className="mt-7">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-blue-300">
+              Última ubicación compartida
+            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <div>
+                <p className="text-sm text-slate-200">
+                  {telemetry.latitude.toFixed(5)}, {telemetry.longitude.toFixed(5)}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {telemetry.locationCapturedAt
+                    ? `Registrada: ${new Date(telemetry.locationCapturedAt).toLocaleString()}`
+                    : "Fecha no disponible"}
+                  {telemetry.locationAccuracyMeters != null
+                    ? ` · Precisión aproximada: ${Math.round(telemetry.locationAccuracyMeters)} m`
+                    : ""}
+                </p>
+              </div>
+              <a
+                href={`https://www.google.com/maps?q=${telemetry.latitude},${telemetry.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/20"
+              >
+                Ver en el mapa
+              </a>
+            </div>
+          </section>
+        ) : null}
 
         <section className="mt-7">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-blue-300">

@@ -86,9 +86,18 @@ function DeviceCard({ device, onShowDetails, onEdit, onDelete }) {
         <span className="text-sm font-semibold tabular-nums text-slate-200">
           {telemetry?.freeStorageMB == null
             ? "Sin datos"
-            : `${(telemetry.freeStorageMB / 1024).toFixed(1)} GB`}
+            : `${(telemetry.freeStorageMB / 1024).toFixed(1)} GB${
+                telemetry.totalStorageMB == null
+                  ? ""
+                  : ` de ${(telemetry.totalStorageMB / 1024).toFixed(1)} GB`
+              }`}
         </span>
       </div>
+      {telemetry?.totalMemoryMB != null ? (
+        <p className="mt-2 text-xs text-slate-500">
+          Memoria RAM: {(telemetry.totalMemoryMB / 1024).toFixed(1)} GB
+        </p>
+      ) : null}
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-800 pt-3">
         <p className="min-w-0 text-xs text-slate-500" title={lastSeen}>
