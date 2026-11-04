@@ -18,6 +18,9 @@
   - Dashboard interactivo para visualizar dispositivos.
   - Login seguro y acceso por roles.
   - Consumo directo de la API backend.
+- **App móvil (Expo Go):**
+  - Registro e inicio de sesión con la misma API.
+  - Registro automático del teléfono y sincronización del estado de dispositivos.
 
 ---
 
@@ -38,6 +41,11 @@ our-devices/
 ├── our-devices-frontend/   # Frontend web (React/Vite)
 │   ├── src/
 │   ├── package.json
+│   └── ...
+│
+├── our-devices-mobile/    # App móvil Expo Go (React Native + TypeScript)
+│   ├── App.tsx
+│   ├── src/
 │   └── ...
 │
 └── README.md               # Documentación general
@@ -62,6 +70,20 @@ cd our-devices-frontend
 npm install
 npm run dev
 ```
+
+### 📱 App móvil (Expo Go)
+```bash
+cd our-devices-mobile
+npm install
+```
+
+Copia `.env.example` a `.env` y cambia `EXPO_PUBLIC_API_URL` por la dirección LAN del equipo donde corre el backend, por ejemplo `http://192.168.1.50:8080` (en Windows puedes consultar la IPv4 Wi-Fi con `ipconfig`). El teléfono y el computador deben estar en la misma red; `localhost` en el teléfono apunta al teléfono, no al computador. Permite el puerto 8080 en el firewall si es necesario.
+
+Con el backend iniciado, ejecuta:
+```bash
+npm start
+```
+Abre el proyecto con Expo Go escaneando el QR que muestra Expo. La app permite iniciar sesión o crear una cuenta, registra este teléfono como tipo **Móvil** y envía batería, memoria RAM total y almacenamiento disponible/total cada 30 segundos mientras está abierta en primer plano. La ubicación es opcional: solo se solicita permiso al activar **Compartir ubicación**, se actualiza mientras la app está abierta y se elimina del servidor al desactivarla. Expo Go puede suspender la app en segundo plano; la app intenta marcar el teléfono desconectado al pasar a segundo plano y el backend lo considera offline si deja de recibir heartbeat durante 90 segundos. CPU y uso de memoria no están disponibles de forma fiable en Expo Go; se muestran como “Sin datos”.
 
 ---
 
