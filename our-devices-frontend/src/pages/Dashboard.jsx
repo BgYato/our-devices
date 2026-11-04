@@ -133,6 +133,13 @@ function Dashboard() {
             </div>
             <button
               type="button"
+              onClick={() => navigate("/dashboard/map")}
+              className="rounded-xl border border-cyan-800/70 bg-cyan-950/40 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition hover:border-cyan-500/60 hover:bg-cyan-950/70"
+            >
+              Mapa general
+            </button>
+            <button
+              type="button"
               onClick={refreshDeviceList}
               disabled={refreshing}
               className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-blue-400/50 hover:bg-slate-700 disabled:opacity-50"

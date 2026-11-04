@@ -6,6 +6,7 @@ import App from "./App.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import DeviceLocation from "./pages/DeviceLocation.jsx";
+import DeviceMap from "./pages/DeviceMap.jsx";
 import Register from "./pages/Register.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
 
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")).render(
           {/* Ejemplo de ruta protegida */}
           <Route element={ <ProtectedRoute /> }>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/map" element={<DeviceMap />} />
             <Route path="/dashboard/devices/:deviceId/location" element={<DeviceLocation />} />
           </Route>
         </Routes>
