@@ -78,10 +78,12 @@ public class DeviceEntity {
     @OneToOne(mappedBy = "device", fetch = FetchType.LAZY, optional = true, cascade = CascadeType.ALL, orphanRemoval = true)
     private DeviceSpecsEntity specs;
 
+    @OneToOne(mappedBy = "device", fetch = FetchType.LAZY, optional = true, cascade = CascadeType.ALL, orphanRemoval = true)
+    private DeviceTelemetryEntity telemetry;
+
     @PrePersist
     protected void onCreate() {
         dateCreation = new Date();
-        lastSeen = new Date();
     }
 
     @PreUpdate

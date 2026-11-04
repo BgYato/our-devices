@@ -4,14 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class DevicesCreateDTO {
-    private String userId;
     private String deviceTypeId;
+    private String deviceTypeName;
     private String name;
     private String customName;
     private String hostname;

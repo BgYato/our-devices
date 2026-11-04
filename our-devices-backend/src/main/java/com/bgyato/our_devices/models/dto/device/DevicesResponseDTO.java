@@ -25,4 +25,5 @@ public class DevicesResponseDTO {
     private Boolean isOnline;
     private String lastSeen;
     private String status;
+    private DeviceTelemetryResponseDTO telemetry;
 }

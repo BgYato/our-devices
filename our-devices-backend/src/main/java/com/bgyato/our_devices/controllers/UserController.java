@@ -7,6 +7,7 @@ import com.bgyato.our_devices.models.dto.user.UsersResponseDTO;
 import com.bgyato.our_devices.models.dto.user.UsersUpdateDTO;
 import com.bgyato.our_devices.models.dto.user.UsersUpdatePasswordDTO;
 import com.bgyato.our_devices.services.interfaces.IUserService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +24,8 @@ public class UserController {
     private final IUserService userService;
 
     @PostMapping("")
-    public ResponseEntity<UsersResponseDTO> saveUser(@RequestBody UsersCreateDTO usersCreateDTO) {
-        return ResponseEntity.status(HttpStatus.OK).body(userService.saveUser(usersCreateDTO));
+    public ResponseEntity<UsersResponseDTO> saveUser(@Valid @RequestBody UsersCreateDTO usersCreateDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.saveUser(usersCreateDTO));
     }
 
     @PutMapping("")

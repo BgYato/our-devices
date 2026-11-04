@@ -10,33 +10,38 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @AllArgsConstructor
 public class DeviceServiceImpl implements IDeviceService {
 
+    private static final Duration ONLINE_WINDOW = Duration.ofSeconds(90);
+    private static final Set<String> DEVICE_TYPE_NAMES = Set.of("Escritorio", "Laptop", "Móvil");
+
     private final IDeviceRepository deviceRepository;
     private final IUserRepository userRepository;
     private final IDeviceTypeRepository deviceTypeRepository;
+    private final IDeviceTelemetryRepository telemetryRepository;
 
     @Override
-    public DevicesResponseDTO saveDevice(DevicesCreateDTO dto) {
-        UserEntity user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con ID: " + dto.getUserId()));
+    @Transactional
+    public DevicesResponseDTO saveDevice(DevicesCreateDTO dto, String email) {
+        UserEntity user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario autenticado no encontrado."));
 
-        DeviceTypeEntity deviceType = deviceTypeRepository.findById(dto.getDeviceTypeId())
-                .orElseThrow(() -> new EntityNotFoundException("Tipo de dispositivo no encontrado con ID: " + dto.getDeviceTypeId()));
+        deviceRepository.findByUser_IdAndNameIgnoreCaseAndIsDeletedFalse(user.getId(), dto.getName())
+                .ifPresent(device -> {
+                    throw new EntityAlreadyExistsException("Ya existe un dispositivo con ese nombre para este usuario.");
+                });
 
-        deviceRepository.findByUser_IdAndNameIgnoreCase(user.getId(), dto.getName())
-                .ifPresent(d -> { throw new EntityAlreadyExistsException("Ya existe un dispositivo con ese nombre para este usuario."); });
-
-        if (dto.getIpAddress() != null) {
-            deviceRepository.findByIpAddress(dto.getIpAddress())
-                    .ifPresent(d -> { throw new EntityAlreadyExistsException("Ya existe un dispositivo registrado con esa dirección IP."); });
-        }
+        DeviceTypeEntity deviceType = resolveDeviceType(dto.getDeviceTypeId(), dto.getDeviceTypeName());
 
         DeviceEntity device = DeviceEntity.builder()
                 .user(user)
@@ -51,81 +56,170 @@ public class DeviceServiceImpl implements IDeviceService {
                 .isOnline(false)
                 .isDeleted(false)
                 .dateCreation(new Date())
-                .lastSeen(new Date())
                 .build();
 
-        device = deviceRepository.save(device);
-        return mapToResponse(device);
+        return mapToResponse(deviceRepository.save(device));
     }
 
     @Override
     @Transactional
-    public DevicesResponseDTO updateDevice(DevicesUpdateDTO dto, String id) {
-        DeviceEntity device = deviceRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado con ID: " + id));
+    public DevicesResponseDTO updateDevice(DevicesUpdateDTO dto, String id, String email) {
+        DeviceEntity device = findOwnedDevice(id, email);
 
         if (dto.getName() != null && !dto.getName().equalsIgnoreCase(device.getName())) {
-            deviceRepository.findByUser_IdAndNameIgnoreCase(device.getUser().getId(), dto.getName())
-                    .ifPresent(d -> { throw new EntityAlreadyExistsException("Ya existe otro dispositivo con ese nombre."); });
+            deviceRepository.findByUser_IdAndNameIgnoreCaseAndIsDeletedFalse(device.getUser().getId(), dto.getName())
+                    .ifPresent(existing -> {
+                        throw new EntityAlreadyExistsException("Ya existe otro dispositivo con ese nombre.");
+                    });
             device.setName(dto.getName());
         }
 
-        if (dto.getCustomName() != null) device.setCustomName(dto.getCustomName());
-        if (dto.getIpAddress() != null) device.setIpAddress(dto.getIpAddress());
-        if (dto.getBatteryLevel() != null) device.setBatteryLevel(dto.getBatteryLevel());
-        if (dto.getLastSeen() != null) device.setLastSeen(dto.getLastSeen());
-        if (dto.getIsOnline() != null) device.setOnline(dto.getIsOnline());
-
-        if (dto.getDeviceTypeId() != null) {
-            DeviceTypeEntity type = deviceTypeRepository.findById(dto.getDeviceTypeId())
-                    .orElseThrow(() -> new EntityNotFoundException("Tipo de dispositivo no encontrado con ID: " + dto.getDeviceTypeId()));
-            device.setDeviceType(type);
+        if (dto.getCustomName() != null) {
+            device.setCustomName(dto.getCustomName());
         }
 
-        device = deviceRepository.save(device);
-        return mapToResponse(device);
+        if (dto.getDeviceTypeId() != null || dto.getDeviceTypeName() != null) {
+            device.setDeviceType(resolveDeviceType(dto.getDeviceTypeId(), dto.getDeviceTypeName()));
+        }
+
+        return mapToResponse(deviceRepository.save(device));
     }
 
     @Override
     @Transactional
-    public DevicesResponseDTO getDeviceById(String id) {
-        DeviceEntity device = deviceRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado con ID: " + id));
-        return mapToResponse(device);
+    public DevicesResponseDTO heartbeat(DeviceHeartbeatDTO heartbeat, String id, String email) {
+        DeviceEntity device = findOwnedDevice(id, email);
+        Instant now = Instant.now();
+
+        device.setLastSeen(Date.from(now));
+        device.setOnline(true);
+        if (heartbeat.getIpAddress() != null && !heartbeat.getIpAddress().isBlank()) {
+            device.setIpAddress(heartbeat.getIpAddress());
+        }
+        device.setBatteryLevel(heartbeat.getBatteryLevel());
+
+        DeviceTelemetryEntity telemetry = telemetryRepository.findByDevice_Id(id)
+                .orElseGet(() -> DeviceTelemetryEntity.builder().device(device).build());
+        telemetry.setBatteryLevel(heartbeat.getBatteryLevel());
+        telemetry.setCpuUsagePercent(heartbeat.getCpuUsagePercent());
+        telemetry.setMemoryUsagePercent(heartbeat.getMemoryUsagePercent());
+        telemetry.setFreeStorageMB(heartbeat.getFreeStorageMB());
+        telemetry.setCapturedAt(now);
+        device.setTelemetry(telemetry);
+        telemetryRepository.save(telemetry);
+
+        return mapToResponse(deviceRepository.save(device));
     }
 
     @Override
     @Transactional
-    public List<DevicesResponseDTO> getDevicesByUserId(String userId) {
-        return deviceRepository.findByUserIdAndIsDeletedFalse(userId)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public void deleteDevice(String id) {
-        DeviceEntity device = deviceRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado con ID: " + id));
-        device.setDeleted(true);
+    public void disconnect(String id, String email) {
+        DeviceEntity device = findOwnedDevice(id, email);
+        device.setOnline(false);
         deviceRepository.save(device);
     }
 
-    private DevicesResponseDTO mapToResponse(DeviceEntity device) {
-        String status = "offline";
-        if (device.getLastSeen() != null) {
-            long diff = new Date().getTime() - device.getLastSeen().getTime();
-            if (diff < 2 * 60 * 1000) status = "online";
+    @Override
+    @Transactional
+    public DevicesResponseDTO getDeviceById(String id, String email) {
+        return mapToResponse(findOwnedDevice(id, email));
+    }
+
+    @Override
+    @Transactional
+    public List<DevicesResponseDTO> getDevicesByUserId(String userId, String email) {
+        UserEntity user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .filter(account -> account.getId().equals(userId))
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró el recurso solicitado."));
+        return mapDevices(deviceRepository.findByUserIdAndIsDeletedFalse(user.getId()));
+    }
+
+    @Override
+    @Transactional
+    public List<DevicesResponseDTO> getDevicesForCurrentUser(String email) {
+        UserEntity user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario autenticado no encontrado."));
+        return mapDevices(deviceRepository.findByUserIdAndIsDeletedFalse(user.getId()));
+    }
+
+    @Override
+    @Transactional
+    public void deleteDevice(String id, String email) {
+        DeviceEntity device = findOwnedDevice(id, email);
+        device.setDeleted(true);
+        device.setOnline(false);
+        deviceRepository.save(device);
+    }
+
+    private DeviceEntity findOwnedDevice(String id, String email) {
+        return deviceRepository.findByIdAndIsDeletedFalse(id)
+                .filter(device -> device.getUser().getEmail().equalsIgnoreCase(email))
+                .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado."));
+    }
+
+    private List<DevicesResponseDTO> mapDevices(List<DeviceEntity> devices) {
+        return devices.stream().map(this::mapToResponse).toList();
+    }
+
+    private DeviceTypeEntity resolveDeviceType(String typeId, String typeName) {
+        if (typeId != null && !typeId.isBlank()) {
+            return deviceTypeRepository.findByIdAndIsDeletedFalse(typeId)
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Tipo de dispositivo no encontrado con ID: " + typeId));
+        }
+        if (typeName == null || typeName.isBlank()) {
+            return null;
         }
 
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String normalizedName = DEVICE_TYPE_NAMES.stream()
+                .filter(name -> name.equalsIgnoreCase(typeName.trim()))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Tipo inválido. Usa Escritorio, Laptop o Móvil."));
+
+        return deviceTypeRepository.findByNameIgnoreCaseAndIsDeletedFalse(normalizedName)
+                .orElseGet(() -> deviceTypeRepository.save(DeviceTypeEntity.builder()
+                        .name(normalizedName)
+                        .description("Tipo de dispositivo")
+                        .isDeleted(false)
+                        .build()));
+    }
+
+    private String getDeviceTypeName(DeviceEntity device) {
+        if (device.getDeviceType() != null) {
+            return device.getDeviceType().getName();
+        }
+        String osName = device.getOsName() == null ? "" : device.getOsName().toLowerCase(Locale.ROOT);
+        if (osName.contains("android") || osName.contains("ios")) {
+            return "Móvil";
+        }
+        if (device.getBatteryLevel() != null
+                || (device.getTelemetry() != null && device.getTelemetry().getBatteryLevel() != null)) {
+            return "Laptop";
+        }
+        return "Escritorio";
+    }
+
+    private DevicesResponseDTO mapToResponse(DeviceEntity device) {
+        Instant lastSeen = device.getLastSeen() == null ? null : device.getLastSeen().toInstant();
+        boolean online = device.isOnline()
+                && lastSeen != null
+                && !lastSeen.isBefore(Instant.now().minus(ONLINE_WINDOW));
+
+        DeviceTelemetryResponseDTO telemetry = device.getTelemetry() == null
+                ? null
+                : new DeviceTelemetryResponseDTO(
+                        device.getTelemetry().getBatteryLevel(),
+                        device.getTelemetry().getCpuUsagePercent(),
+                        device.getTelemetry().getMemoryUsagePercent(),
+                        device.getTelemetry().getFreeStorageMB(),
+                        device.getTelemetry().getCapturedAt());
 
         return new DevicesResponseDTO(
                 device.getId(),
                 device.getUser().getId(),
                 device.getUser().getFirstName() + " " + device.getUser().getLastName(),
-                device.getDeviceType() != null ? device.getDeviceType().getName() : "Desconocido",
+                getDeviceTypeName(device),
                 device.getName(),
                 device.getCustomName(),
                 device.getHostname(),
@@ -134,9 +228,9 @@ public class DeviceServiceImpl implements IDeviceService {
                 device.getIpAddress(),
                 device.getMacAddress(),
                 device.getBatteryLevel(),
-                device.isOnline(),
-                device.getLastSeen() != null ? formatter.format(device.getLastSeen()) : null, // 👈 formateado
-                status
-        );
+                online,
+                lastSeen == null ? null : DateTimeFormatter.ISO_INSTANT.format(lastSeen),
+                online ? "online" : "offline",
+                telemetry);
     }
 }

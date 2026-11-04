@@ -7,12 +7,13 @@
 ## 📌 Características principales
 - **Backend (API en Java con Spring Boot):**
   - Manejo de usuarios, autenticación con JWT.
-  - Gestión CRUD de dispositivos.
+  - Gestión de dispositivos limitada a la cuenta autenticada.
+  - Heartbeat del agente con estado calculado por el servidor y telemetría más reciente.
   - Endpoints seguros y documentados.
 - **Cliente de escritorio (Python + PyQt6):**
   - Interfaz gráfica de usuario (GUI).
   - Autenticación y consulta de dispositivos.
-  - Servicio en segundo plano que envía actualizaciones periódicas al backend (ej. batería, IP, estado).
+  - Servicio en segundo plano que reporta métricas cada 30 segundos sin bloquear la interfaz.
 - **Frontend web (React/Vite):**
   - Dashboard interactivo para visualizar dispositivos.
   - Login seguro y acceso por roles.
@@ -70,6 +71,8 @@ npm run dev
 3. Corre el **cliente de escritorio** en paralelo (`python main.py`).
 4. Autentícate en cualquiera de los clientes y comienza a gestionar dispositivos 🚀.
 
+Puedes crear una cuenta desde `http://localhost:5173/register`. El alta valida los campos, normaliza correo/usuario y permite iniciar sesión inmediatamente; todavía no requiere verificación por correo. El cliente de escritorio también inicia sesión con una cuenta creada desde la web.
+
 ---
 
 ## 🛠️ Configuración
@@ -84,6 +87,8 @@ Cada módulo tiene su propio archivo de configuración:
 - **API REST** → punto central de datos y lógica.
 - **Frontend web** → interfaz principal para usuarios.
 - **Cliente de escritorio** → ejecuta actualizaciones en segundo plano y muestra datos básicos.
+
+El agente reporta a `POST /devices/{id}/heartbeat`; el servidor registra la hora de recepción y marca el dispositivo offline si no recibe señales durante 90 segundos. El agente también intenta reportar su desconexión al cerrar. `GET /devices/me` devuelve los equipos de la cuenta autenticada y cada respuesta incluye el último snapshot de batería, CPU, memoria y almacenamiento libre. Se conserva solo ese snapshot, sin histórico. El backend determina el propietario a partir de la cuenta autenticada, no de un `userId` enviado por el cliente, y todas las operaciones sobre dispositivos, especificaciones y logs verifican esa propiedad.
 
 ---
 

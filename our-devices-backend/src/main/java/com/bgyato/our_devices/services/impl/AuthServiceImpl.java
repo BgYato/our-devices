@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -31,20 +32,22 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public AuthResponse login(AuthRequest loginRequest) {
+        String identifier = loginRequest.getIdentifier().trim();
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            loginRequest.getIdentifier(),
+                            identifier,
                             loginRequest.getPassword()
                     )
             );
         } catch (AuthenticationException ex) {
-            throw new BadCredentialsException("Error al iniciar sesión: " + (ex.getMessage().equals("Bad credentials") ? "Contraseña incorrecta" : ex.getMessage()));
+            throw new BadCredentialsException("Usuario o contraseña incorrectos.");
         }
 
-        UserEntity userEntity = loginRequest.getIdentifier().contains("@")
-                ? userRepository.findByEmailAndIsDeletedFalse(loginRequest.getIdentifier()).orElseThrow()
-                : userRepository.findByUsernameAndIsDeletedFalse(loginRequest.getIdentifier()).orElseThrow();
+        String normalizedIdentifier = identifier.toLowerCase(Locale.ROOT);
+        UserEntity userEntity = normalizedIdentifier.contains("@")
+                ? userRepository.findByEmailAndIsDeletedFalse(normalizedIdentifier).orElseThrow()
+                : userRepository.findByUsernameAndIsDeletedFalse(normalizedIdentifier).orElseThrow();
 
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("id", userEntity.getId());
@@ -62,6 +65,7 @@ public class AuthServiceImpl implements IAuthService {
 
         return AuthResponse.builder()
                 .token(token)
+                .user(userService.getUserById(userEntity.getId()))
                 .build();
     }
 

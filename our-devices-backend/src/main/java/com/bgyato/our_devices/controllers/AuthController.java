@@ -3,6 +3,7 @@ package com.bgyato.our_devices.controllers;
 import com.bgyato.our_devices.models.dto.AuthRequest;
 import com.bgyato.our_devices.models.dto.AuthResponse;
 import com.bgyato.our_devices.services.interfaces.IAuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,7 @@ public class AuthController {
     private final IAuthService authService;
 
     @PostMapping("/login")
-    private ResponseEntity<AuthResponse> login(@RequestBody AuthRequest loginRequest) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest loginRequest) {
         return ResponseEntity.status(HttpStatus.OK).body(authService.login(loginRequest));
     }
 }
-

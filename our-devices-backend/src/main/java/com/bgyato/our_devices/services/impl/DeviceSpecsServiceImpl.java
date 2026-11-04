@@ -23,9 +23,10 @@ public class DeviceSpecsServiceImpl implements IDeviceSpecsService {
 
     @Override
     @Transactional
-    public DeviceSpecsResponseDTO save(DeviceSpecsSaveDTO specs) {
+    public DeviceSpecsResponseDTO save(DeviceSpecsSaveDTO specs, String email) {
         DeviceEntity device = deviceRepository.findByIdAndIsDeletedFalse(specs.getDeviceId())
-                .orElseThrow(() -> new EntityNotFoundException("No se ha encontrado al equipo con id " + specs.getDeviceId()));
+                .filter(item -> item.getUser().getEmail().equalsIgnoreCase(email))
+                .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado."));
 
         if (deviceSpecsRepository.findByDevice_Id(specs.getDeviceId()).isPresent())
             throw new EntityAlreadyExistsException("Ya existen especificaciones para la máquina.");
@@ -49,7 +50,12 @@ public class DeviceSpecsServiceImpl implements IDeviceSpecsService {
     }
 
     @Override
-    public DeviceSpecsResponseDTO findByDeviceId(String deviceId) {
+    @Transactional
+    public DeviceSpecsResponseDTO findByDeviceId(String deviceId, String email) {
+        deviceRepository.findByIdAndIsDeletedFalse(deviceId)
+                .filter(device -> device.getUser().getEmail().equalsIgnoreCase(email))
+                .orElseThrow(() -> new EntityNotFoundException("Dispositivo no encontrado."));
+
         DeviceSpecsEntity entity = deviceSpecsRepository.findByDevice_Id(deviceId)
                 .orElseThrow(() -> new EntityNotFoundException("No se ha encontrado a la máquina con ID "+deviceId));
 

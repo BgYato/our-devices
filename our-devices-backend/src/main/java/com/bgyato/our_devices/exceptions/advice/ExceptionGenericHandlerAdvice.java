@@ -6,12 +6,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.time.LocalDateTime;
 import java.util.Date;
 
 @RestControllerAdvice
 public class ExceptionGenericHandlerAdvice {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorInfo> handleValidationException(MethodArgumentNotValidException ex) {
+        String description = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .findFirst()
+                .orElse("Los datos enviados no son válidos.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorInfo.builder()
+                .code("1001")
+                .timestamp(String.valueOf(LocalDateTime.now()))
+                .description(description)
+                .exception(ex.getClass().getSimpleName())
+                .build());
+    }
 
     @ExceptionHandler(JwtTokenErrorException.class)
     public ResponseEntity<ErrorInfo> jwtTokenErrorException (JwtTokenErrorException e) {
@@ -47,7 +62,7 @@ public class ExceptionGenericHandlerAdvice {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorInfo> handleBadCredentialsException(BadCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorInfo.builder()
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ErrorInfo.builder()
                 .code("1005")
                 .timestamp(String.valueOf(LocalDateTime.now()))
                 .description(ex.getMessage())

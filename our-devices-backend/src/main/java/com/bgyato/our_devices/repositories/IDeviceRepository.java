@@ -21,7 +21,6 @@ public interface IDeviceRepository extends JpaRepository<DeviceEntity, String> {
 
     Optional<DeviceEntity> findByIdAndIsDeletedFalse(String id);
     List<DeviceEntity> findByUserIdAndIsDeletedFalse(String userId);
-    Optional<DeviceEntity> findByIpAddress(String ipAddress);
-    Optional<DeviceEntity> findByUser_IdAndNameIgnoreCase(String userId, String name);
+    Optional<DeviceEntity> findByUser_IdAndNameIgnoreCaseAndIsDeletedFalse(String userId, String name);
 
 }

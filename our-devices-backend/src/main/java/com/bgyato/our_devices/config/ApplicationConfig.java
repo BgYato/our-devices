@@ -1,6 +1,5 @@
 package com.bgyato.our_devices.config;
 
-import com.bgyato.our_devices.exceptions.commons.EntityNotFoundException;
 import com.bgyato.our_devices.models.entities.UserEntity;
 import com.bgyato.our_devices.repositories.IUserRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +12,10 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Optional;
+import java.util.Locale;
 
 @Configuration
 @RequiredArgsConstructor
@@ -44,15 +45,16 @@ public class ApplicationConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return identifier -> {
+            String normalizedIdentifier = identifier.trim().toLowerCase(Locale.ROOT);
             Optional<UserEntity> userOpt;
-            if (identifier.contains("@")) {
-                userOpt = userRepository.findByEmailAndIsDeletedFalse(identifier);
+            if (normalizedIdentifier.contains("@")) {
+                userOpt = userRepository.findByEmailAndIsDeletedFalse(normalizedIdentifier);
             } else {
-                userOpt = userRepository.findByUsernameAndIsDeletedFalse(identifier);
+                userOpt = userRepository.findByUsernameAndIsDeletedFalse(normalizedIdentifier);
             }
 
             UserEntity user = userOpt.orElseThrow(
-                    () -> new EntityNotFoundException("Cuenta no encontrada. ")
+                    () -> new UsernameNotFoundException("Usuario o contraseña incorrectos.")
             );
 
             return org.springframework.security.core.userdetails.User.builder()

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Locale;
 
 @Service
 @AllArgsConstructor
@@ -31,11 +32,17 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public UsersResponseDTO saveUser(UsersCreateDTO userCreateDTO) {
-        if (validateIfUserExistsBeforeSave(userCreateDTO.getEmail(), userCreateDTO.getUsername())) {
+        String email = userCreateDTO.getEmail().trim().toLowerCase(Locale.ROOT);
+        String username = userCreateDTO.getUsername().trim().toLowerCase(Locale.ROOT);
+        if (validateIfUserExistsBeforeSave(email, username)) {
             throw new EntityAlreadyExistsException("El correo o nombre de usuario ya se encuentra registrado");
         }
 
         UserEntity user = modelMapper.map(userCreateDTO, UserEntity.class);
+        user.setFirstName(userCreateDTO.getFirstName().trim());
+        user.setLastName(userCreateDTO.getLastName().trim());
+        user.setEmail(email);
+        user.setUsername(username);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
 

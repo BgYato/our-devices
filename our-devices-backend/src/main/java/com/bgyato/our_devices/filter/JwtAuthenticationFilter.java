@@ -31,9 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        System.out.println("Ejecutando JwtAuthenticationFilter");
         final String token = getTokenFromRequest(request);
-        System.out.println(token);
         final String username;
 
         if (token == null) {
@@ -61,7 +59,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 
         if (username!=null && SecurityContextHolder.getContext().getAuthentication()==null) {
-            System.out.println(username);
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
             if (jwtServiceImpl.isTokenValid(token, userDetails)) {
