@@ -1,4 +1,5 @@
 import logging
+import requests
 from typing import Any
 from services.api import ApiClient
 
@@ -13,18 +14,24 @@ class DeviceSpecsService:
         self.api = api
         self.endpoints = endpoints
 
-    def get_specs(self, device_id: str) -> dict[str, Any]:
+    def get_specs(self, device_id: str) -> dict[str, Any] | None:
         """
         Obtiene las especificaciones de un dispositivo.
         """
         try:
             endpoint = self.endpoints["get_specs"].replace("{deviceId}", device_id)
-            logging.info(f"🔍 Consultando especificaciones del dispositivo {device_id}")
+            logging.info(f"Consultando especificaciones del dispositivo {device_id}")
             specs = self.api.get(endpoint)
             return specs or {}
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                logging.info("No existen especificaciones para el dispositivo todavía.")
+                return None
+            logging.error(f"Error obteniendo especificaciones de {device_id}: {e}")
+            raise
         except Exception as e:
-            logging.error(f"❌ Error obteniendo especificaciones de {device_id}: {e}")
-            return {}
+            logging.error(f"Error obteniendo especificaciones de {device_id}: {e}")
+            raise
 
     def register_specs(self, specs_data: dict) -> dict[str, Any]:
         """
@@ -54,11 +61,11 @@ class DeviceSpecsService:
         try:
             endpoint = self.endpoints["register_specs"]
             logging.info(
-                f"📊 Registrando especificaciones para dispositivo {specs_data.get('deviceId')}"
+                f"Registrando especificaciones para dispositivo {specs_data.get('deviceId')}"
             )
             response = self.api.post(endpoint, specs_data)
-            logging.info(f"✅ Especificaciones registradas exitosamente")
+            logging.info("Especificaciones registradas exitosamente")
             return response
         except Exception as e:
-            logging.error(f"❌ Error registrando especificaciones: {e}")
+            logging.error(f"Error registrando especificaciones: {e}")
             raise

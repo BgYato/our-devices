@@ -37,22 +37,22 @@ class DeviceIdManager:
         """
         try:
             file_path = DeviceIdManager.DEVICE_ID_FILE.absolute()
-            logging.info(f"🔍 Buscando device_id en: {file_path}")
+            logging.info(f"Buscando device_id en: {file_path}")
 
             if DeviceIdManager.DEVICE_ID_FILE.exists():
                 device_id = DeviceIdManager.DEVICE_ID_FILE.read_text(
                     encoding="utf-8"
                 ).strip()
                 if device_id:
-                    logging.info(f"📱 Dispositivo encontrado: {device_id}")
+                    logging.info(f"Dispositivo encontrado: {device_id}")
                     return device_id
                 else:
-                    logging.warning("⚠️ El archivo device_id.txt existe pero está vacío")
+                    logging.warning("El archivo device_id.txt existe pero está vacío")
             else:
-                logging.info("📱 No se encontró registro de dispositivo local")
+                logging.info("No se encontró registro de dispositivo local")
             return None
         except Exception as e:
-            logging.error(f"❌ Error leyendo device_id.txt: {e}")
+            logging.error(f"Error leyendo device_id.txt: {e}")
             return None
 
     @staticmethod
@@ -68,7 +68,7 @@ class DeviceIdManager:
         """
         try:
             file_path = DeviceIdManager.DEVICE_ID_FILE.absolute()
-            logging.info(f"💾 Intentando guardar device_id en: {file_path}")
+            logging.info(f"Intentando guardar device_id en: {file_path}")
 
             # Asegurar que el directorio padre existe
             DeviceIdManager.DEVICE_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -82,25 +82,23 @@ class DeviceIdManager:
                     encoding="utf-8"
                 ).strip()
                 if saved_content == device_id:
-                    logging.info(f"✅ Device ID guardado correctamente: {device_id}")
+                    logging.info(f"Device ID guardado correctamente: {device_id}")
                     return True
                 else:
                     logging.error(
-                        f"❌ El contenido guardado no coincide. Esperado: {device_id}, Guardado: {saved_content}"
+                        f"El contenido guardado no coincide. Esperado: {device_id}, Guardado: {saved_content}"
                     )
                     return False
             else:
-                logging.error("❌ El archivo no se creó después de write_text()")
+                logging.error("El archivo no se creó después de write_text()")
                 return False
 
         except PermissionError as e:
-            logging.error(f"❌ Error de permisos al guardar device_id.txt: {e}")
-            logging.error(
-                f"   Intenta ejecutar como administrador o cambiar la ubicación del archivo"
-            )
+            logging.error(f"Error de permisos al guardar device_id.txt: {e}")
+            logging.error("Intenta ejecutar como administrador o cambiar la ubicación del archivo")
             return False
         except Exception as e:
-            logging.error(f"❌ Error inesperado guardando device_id.txt: {e}")
+            logging.error(f"Error inesperado guardando device_id.txt: {e}")
             import traceback
 
             logging.error(traceback.format_exc())
@@ -127,8 +125,8 @@ class DeviceIdManager:
         try:
             if DeviceIdManager.DEVICE_ID_FILE.exists():
                 DeviceIdManager.DEVICE_ID_FILE.unlink()
-                logging.info("🗑️ Device ID eliminado")
+                logging.info("Device ID eliminado")
             return True
         except Exception as e:
-            logging.error(f"❌ Error eliminando device_id.txt: {e}")
+            logging.error(f"Error eliminando device_id.txt: {e}")
             return False

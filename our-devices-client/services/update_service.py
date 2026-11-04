@@ -1,63 +1,51 @@
 import logging
-import traceback
-from PyQt6.QtCore import QObject, QTimer
+from threading import Event
+from time import monotonic
+
+from PyQt6.QtCore import QThread, pyqtSignal
 from services.devices import DevicesService
 
 
-class UpdateService(QObject):
-    """
-    Servicio que envía actualizaciones periódicas del dispositivo al backend.
-    """
+class UpdateService(QThread):
+    """Envía heartbeats en segundo plano sin bloquear la interfaz gráfica."""
+
+    heartbeat_received = pyqtSignal(dict)
+    update_failed = pyqtSignal(str)
 
     def __init__(
         self,
         devices_service: DevicesService,
         device_id: str,
-        interval: int = 15000,
+        interval: int = 30000,
         parent=None,
     ):
-        """
-        :param devices_service: instancia de DevicesService
-        :param device_id: ID del dispositivo que se va a actualizar
-        :param interval: intervalo en milisegundos (default 15s)
-        :param parent: QObject padre (opcional)
-        """
         super().__init__(parent)
         self.devices_service = devices_service
         self.device_id = device_id
+        self.interval = interval
+        self._stop_event = Event()
 
-        # ⏰ Configurar timer
-        self.timer = QTimer(self)
-        self.timer.setInterval(interval)
-        self.timer.timeout.connect(self.send_update)
+    def run(self):
+        while not self._stop_event.is_set():
+            started_at = monotonic()
+            try:
+                response = self.devices_service.send_heartbeat(self.device_id)
+                self.heartbeat_received.emit(response)
+            except Exception as error:
+                logging.exception("Error enviando heartbeat del dispositivo.")
+                self.update_failed.emit(str(error))
 
-        logging.info(f"🛠️ UpdateService preparado para dispositivo {device_id}")
+            elapsed = monotonic() - started_at
+            remaining = max(0, self.interval / 1000 - elapsed)
+            if self._stop_event.wait(remaining):
+                break
 
-    # ------------------------
-    # 🔹 Control del servicio
-    # ------------------------
-    def start(self):
-        """Inicia el servicio de actualizaciones periódicas"""
-        if not self.timer.isActive():
-            self.timer.start()
-            logging.info("⏳ UpdateService iniciado.")
-        else:
-            logging.info("⚠️ UpdateService ya estaba activo.")
+        try:
+            self.devices_service.disconnect_device(self.device_id)
+        except Exception as error:
+            logging.warning("No se pudo reportar la desconexión del dispositivo: %s", error)
 
     def stop(self):
-        """Detiene el servicio"""
-        if self.timer.isActive():
-            self.timer.stop()
-            logging.info("🛑 UpdateService detenido.")
-
-    # ------------------------
-    # 🔹 Lógica de actualización
-    # ------------------------
-    def send_update(self):
-        """Envía un update del dispositivo al backend"""
-        try:
-            res = self.devices_service.update_device(self.device_id)
-            logging.info(f"✅ Update enviado correctamente: {res}")
-        except Exception as e:
-            logging.error(f"❌ Error enviando update: {e}")
-            logging.debug(traceback.format_exc())
+        self._stop_event.set()
+        if self.isRunning() and not self.wait(14000):
+            logging.error("El servicio de heartbeat no finalizó dentro del tiempo esperado.")

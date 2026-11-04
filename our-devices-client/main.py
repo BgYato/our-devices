@@ -34,102 +34,90 @@ def main() -> None:
     devices = DevicesService(api, ENDPOINTS)
     specs_service = DeviceSpecsService(api, ENDPOINTS)
 
-    def register_or_verify_device(user: dict) -> bool:
+    def register_specs_if_missing(device_id: str) -> None:
+        try:
+            if specs_service.get_specs(device_id) is not None:
+                return
+            specs_data = SystemInfo.get_device_specs(
+                device_id=device_id, client_version="v1.0.0"
+            )
+            specs_service.register_specs(specs_data)
+            logging.info("Especificaciones registradas exitosamente")
+        except Exception as spec_error:
+            logging.warning(
+                "No se pudieron registrar las especificaciones: %s", spec_error
+            )
+
+    def register_or_verify_device(user: dict) -> str | None:
         """
-        Verifica si el dispositivo está registrado, si no lo registra automáticamente
+        Verifica si el dispositivo está registrado, si no lo registra automáticamente.
 
         Returns:
-            True si el dispositivo está listo, False si hubo error
+            El ID del dispositivo listo o None si hubo error.
         """
         try:
-            # 1. Verificar si existe device_id.txt
             device_id = DeviceIdManager.get_device_id()
 
             if device_id:
-                # 2. Validar que el dispositivo sigue existiendo en la BD
                 logging.info(
-                    f"🔍 Verificando dispositivo {device_id} en la base de datos..."
+                    f"Verificando dispositivo {device_id} en la base de datos..."
                 )
                 device = devices.get_device(device_id)
-
                 if device:
-                    logging.info(f"✅ Dispositivo verificado: {device.get('name')}")
-                    return True
-                else:
-                    logging.warning(
-                        "⚠️ El dispositivo no existe en la BD, re-registrando..."
-                    )
-                    DeviceIdManager.clear_device_id()
-                    # Continúa al registro abajo
+                    logging.info(f"Dispositivo verificado: {device.get('name')}")
+                    device_type_name = SystemInfo.get_device_type_name()
+                    if device.get("deviceTypeName") != device_type_name:
+                        devices.update_device(
+                            device_id, {"deviceTypeName": device_type_name}
+                        )
+                    register_specs_if_missing(device_id)
+                    return device_id
 
-            # 3. Solo registrar si NO existe device_id
-            if not device_id:
-                logging.info("📝 Registrando nuevo dispositivo...")
-
-                # Obtener información del sistema
-                device_data = SystemInfo.get_device_info(
-                    user_id=user["id"],
-                    device_type_id="13cb54ba-1add-4934-895b-749f4f0b7f9b",
-                    custom_name=f"PC de {user.get('firstName', 'Usuario')}",
+                logging.warning(
+                    "El dispositivo no existe para esta cuenta, se registrará de nuevo..."
                 )
+                DeviceIdManager.clear_device_id()
+                device_id = None
 
-                # Registrar en la API
-                response = devices.register_device(device_data)
+            logging.info("Registrando nuevo dispositivo...")
+            device_data = SystemInfo.get_device_info(
+                custom_name=f"PC de {user.get('firstName', 'Usuario')}",
+            )
+            response = devices.register_device(device_data)
+            new_device_id = response.get("id")
+            if not new_device_id:
+                logging.error("No se pudo obtener el ID del dispositivo registrado")
+                return None
 
-                # Guardar el UUID localmente
-                new_device_id = response.get("id")
-                if new_device_id:
-                    DeviceIdManager.save_device_id(new_device_id)
-                    logging.info(
-                        f"✅ Dispositivo registrado exitosamente: {new_device_id}"
-                    )
+            DeviceIdManager.save_device_id(new_device_id)
+            logging.info("Dispositivo registrado exitosamente: %s", new_device_id)
+            register_specs_if_missing(new_device_id)
 
-                    # 🔹 Registrar especificaciones del dispositivo
-                    try:
-                        specs_data = SystemInfo.get_device_specs(
-                            device_id=new_device_id, client_version="v1.0.0"
-                        )
-                        specs_service.register_specs(specs_data)
-                        logging.info("✅ Especificaciones registradas exitosamente")
-                    except Exception as spec_error:
-                        logging.warning(
-                            f"⚠️ No se pudieron registrar las especificaciones: {spec_error}"
-                        )
-                        # No es crítico, continuar igual
-
-                    # Mostrar notificación al usuario
-                    QMessageBox.information(
-                        None,
-                        "Dispositivo Registrado",
-                        f"Este dispositivo ha sido registrado como:\n{response.get('name')}\n\n"
-                        f"Sistema: {response.get('osName')} {response.get('osVersion')}\n"
-                        f"IP: {response.get('ipAddress')}",
-                    )
-                    return True
-                else:
-                    logging.error(
-                        "❌ No se pudo obtener el ID del dispositivo registrado"
-                    )
-                    return False
-
-            return True
+            QMessageBox.information(
+                None,
+                "Dispositivo Registrado",
+                f"Este dispositivo ha sido registrado como:\n{response.get('name')}\n\n"
+                f"Sistema: {response.get('osName')} {response.get('osVersion')}\n"
+                f"IP: {response.get('ipAddress')}",
+            )
+            return new_device_id
 
         except Exception as e:
-            logging.error(f"❌ Error en registro/verificación de dispositivo: {e}")
+            logging.error(f"Error en registro/verificación de dispositivo: {e}")
             QMessageBox.warning(
                 None,
                 "Error de Registro",
                 f"No se pudo registrar/verificar el dispositivo:\n{e}\n\n"
                 "Puedes continuar, pero algunas funciones pueden no estar disponibles.",
             )
-            return False
+            return None
 
     def open_dashboard(user: dict, token: str) -> DashboardWindow:
         api.set_token(token)
         save_session(token, user)
 
-        # 🔹 Verificar/registrar dispositivo antes de abrir dashboard
-        register_or_verify_device(user)
+        # Verificar o registrar el dispositivo antes de abrir el panel.
+        device_id = register_or_verify_device(user)
 
         def do_logout() -> None:
             clear_session()
@@ -137,7 +125,9 @@ def main() -> None:
             dash.close()
             show_login()
 
-        dash = DashboardWindow(user, devices, specs_service, on_logout=do_logout)
+        dash = DashboardWindow(
+            user, devices, specs_service, device_id=device_id, on_logout=do_logout
+        )
         dash.resize(1080, 640)
         dash.show()
         return dash

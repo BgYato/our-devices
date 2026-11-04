@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QFont
+import requests
 
 
 class LoginWindow(QWidget):
@@ -18,7 +18,7 @@ class LoginWindow(QWidget):
         super().__init__()
         self.auth_service = auth_service
         self.setWindowTitle("OurDevices - Login")
-        self.resize(960, 540)  # 🔥 Tamaño más amplio, buena relación 16:9
+        self.resize(960, 540)
         self.setMinimumSize(900, 520)
 
         # Cargar estilos externos
@@ -32,7 +32,7 @@ class LoginWindow(QWidget):
 
         title = QLabel("OurDevices")
         title.setObjectName("logoTitle")
-        subtitle = QLabel("Controla y gestiona tus dispositivos con facilidad 🚀")
+        subtitle = QLabel("Controla y gestiona tus dispositivos con facilidad")
         subtitle.setObjectName("logoSubtitle")
         subtitle.setWordWrap(True)
 
@@ -87,7 +87,7 @@ class LoginWindow(QWidget):
 
     def handle_login(self):
         identifier = self.input_id.text().strip()
-        password = self.input_pw.text().strip()
+        password = self.input_pw.text()
         if not identifier or not password:
             QMessageBox.warning(self, "Ups", "Completa usuario y contraseña.")
             return
@@ -98,6 +98,29 @@ class LoginWindow(QWidget):
             user = self.auth_service.me()
             self.set_loading(False)
             self.logged_in.emit(user, token)
+        except requests.HTTPError as e:
+            self.set_loading(False)
+            response = e.response
+            try:
+                error_body = response.json() if response is not None else {}
+            except ValueError:
+                error_body = {}
+            description = str(
+                error_body.get("description") or error_body.get("message") or ""
+            )
+            credential_error = response is not None and response.status_code == 401
+            credential_error = credential_error or any(
+                word in description.lower()
+                for word in ("contraseña", "credenciales", "cuenta no encontrada")
+            )
+            message = (
+                "El usuario o la contraseña son incorrectos."
+                if credential_error
+                else description or "No se pudo validar el inicio de sesión."
+            )
+            QMessageBox.warning(self, "No se pudo iniciar sesión", message)
         except Exception as e:
             self.set_loading(False)
-            QMessageBox.critical(self, "Error", f"No se pudo iniciar sesión.\n{e}")
+            QMessageBox.critical(
+                self, "Error de conexión", f"No se pudo iniciar sesión.\n{e}"
+            )

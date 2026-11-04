@@ -17,6 +17,10 @@ QLabel#userInfo {
     line-height: 1.3em;
 }
 
+QLabel#userInitials {
+    font-size: 15px;
+}
+
 QPushButton#iconBtn {
     background: #1e293b;
     border: none;
@@ -58,11 +62,30 @@ QListWidget#deviceList {
 }
 
 QListWidget::item {
-    padding: 10px;
+    color: #cbd5e1;
+    padding: 14px 10px;
     border-bottom: 1px solid #1e293b;
 }
 
 QListWidget::item:selected {
-    background: #1e3a8a;
+    color: #eff6ff;
+    background: #1e3a5f;
     border-radius: 6px;
+}
+
+QLabel#metricValue {
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QProgressBar {
+    background: #1e293b;
+    border: none;
+    border-radius: 5px;
+}
+
+QProgressBar::chunk {
+    background: #38bdf8;
+    border-radius: 5px;
 }

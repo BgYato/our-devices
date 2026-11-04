@@ -3,11 +3,25 @@ import socket
 import uuid
 import psutil
 import screeninfo
+from pathlib import Path
 from typing import Optional
 
 
 class SystemInfo:
     """Obtiene información del sistema operativo y hardware"""
+
+    @staticmethod
+    def get_device_type_name() -> str:
+        """Clasifica el equipo según el sistema y la presencia de batería."""
+        system = platform.system()
+        if system in {"Android", "iOS"}:
+            return "Móvil"
+        try:
+            if psutil.sensors_battery() is not None:
+                return "Laptop"
+        except (AttributeError, NotImplementedError, OSError, RuntimeError):
+            pass
+        return "Escritorio"
 
     @staticmethod
     def get_hostname() -> str:
@@ -99,12 +113,28 @@ class SystemInfo:
             (total_mb, free_mb)
         """
         try:
-            disk = psutil.disk_usage("/")
+            disk = psutil.disk_usage(Path.home().anchor or "/")
             total_mb = int(disk.total / (1024 * 1024))
             free_mb = int(disk.free / (1024 * 1024))
             return total_mb, free_mb
         except Exception:
             return 0, 0
+
+    @staticmethod
+    def get_telemetry() -> dict:
+        """Obtiene el último snapshot de métricas de uso del equipo."""
+        try:
+            battery = psutil.sensors_battery()
+        except (AttributeError, NotImplementedError, OSError, RuntimeError):
+            battery = None
+        _, free_storage = SystemInfo.get_storage_info()
+        return {
+            "ipAddress": SystemInfo.get_ip_address(),
+            "batteryLevel": round(battery.percent) if battery is not None else None,
+            "cpuUsagePercent": psutil.cpu_percent(interval=0.1),
+            "memoryUsagePercent": psutil.virtual_memory().percent,
+            "freeStorageMB": free_storage,
+        }
 
     @staticmethod
     def get_architecture() -> str:
@@ -128,16 +158,14 @@ class SystemInfo:
 
     @staticmethod
     def get_device_info(
-        user_id: str,
-        device_type_id: str = "13cb54ba-1add-4934-895b-749f4f0b7f9b",
+        device_type_id: Optional[str] = None,
         custom_name: Optional[str] = None,
     ) -> dict:
         """
         Genera un diccionario completo con la información del dispositivo
 
         Args:
-            user_id: ID del usuario autenticado
-            device_type_id: ID del tipo de dispositivo (por defecto laptop)
+            device_type_id: ID del tipo de dispositivo, si existe uno configurado
             custom_name: Nombre personalizado opcional
 
         Returns:
@@ -145,9 +173,8 @@ class SystemInfo:
         """
         hostname = SystemInfo.get_hostname()
 
-        return {
-            "userId": user_id,
-            "deviceTypeId": device_type_id,
+        device_info = {
+            "deviceTypeName": SystemInfo.get_device_type_name(),
             "name": hostname,
             "customName": custom_name or f"PC de {hostname}",
             "hostname": hostname,
@@ -156,6 +183,9 @@ class SystemInfo:
             "ipAddress": SystemInfo.get_ip_address(),
             "macAddress": SystemInfo.get_mac_address(),
         }
+        if device_type_id:
+            device_info["deviceTypeId"] = device_type_id
+        return device_info
 
     @staticmethod
     def get_device_specs(device_id: str, client_version: str = "v1.0.0") -> dict:
