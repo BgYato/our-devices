@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Register from "./pages/Register.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
 
 document.title = "Our Devices";
@@ -19,6 +20,7 @@ createRoot(document.getElementById("root")).render(
 
           {/* Login */}
           <Route path="/login" element={<App />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Ejemplo de ruta protegida */}
           <Route element={ <ProtectedRoute /> }>

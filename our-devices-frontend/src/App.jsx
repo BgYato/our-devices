@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login } from "./service/authService";
 import LoadingButton from "./components/ui/LoadingButton";
 import { useToast } from "./context/ToastContext";
@@ -65,6 +65,12 @@ function App() {
             Iniciar sesión
           </LoadingButton>
         </form>
+        <p className="mt-6 text-center text-sm text-gray-300">
+          ¿No tienes una cuenta?{" "}
+          <Link className="font-semibold text-blue-300 hover:text-blue-200" to="/register">
+            Regístrate
+          </Link>
+        </p>
       </div>
     </div>
   );

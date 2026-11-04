@@ -1,9 +1,10 @@
 function LoadingButton({ isLoading, children, ...props }) {
+  const { className, ...buttonProps } = props;
   return (
     <button
-      {...props}
-      disabled={isLoading || props.disabled}
-      className={`w-full cursor-pointer flex justify-center items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg shadow-lg transition duration-200 disabled:opacity-50`}
+      {...buttonProps}
+      disabled={isLoading || buttonProps.disabled}
+      className={`flex cursor-pointer items-center justify-center rounded-lg bg-blue-600 py-2 font-semibold text-white shadow-lg transition duration-200 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 ${className || "w-full"}`}
     >
       {isLoading ? (
         <svg

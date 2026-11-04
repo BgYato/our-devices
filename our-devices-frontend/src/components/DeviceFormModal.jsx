@@ -1,81 +1,112 @@
 import { useState } from "react";
-import { addDevice } from "../service/deviceService";
+import { addDevice, updateDevice } from "../service/deviceService";
 import LoadingButton from "./ui/LoadingButton";
 import { useToast } from "../context/ToastContext";
 
-function DeviceFormModal({ userId, onDeviceAdded, onClose }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState("");
+function DeviceFormModal({ device, onDeviceSaved, onClose }) {
+  const [name, setName] = useState(device?.name || "");
+  const [customName, setCustomName] = useState(device?.customName || "");
+  const [deviceTypeName, setDeviceTypeName] = useState(device?.deviceTypeName || "Escritorio");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { addToast } = useToast();
+  const editing = Boolean(device);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage("");
     try {
-      const response = await fetch("https://api.ipify.org?format=json");
-      const { ip } = await response.json();
-
-      const deviceData = {
-        userId,
-        name,
-        type,
-        ipAddress: ip,
-      };
-
-      const newDevice = await addDevice(deviceData);
-      onDeviceAdded(newDevice);
-
-      setName("");
-      setType("");
-
-      addToast("Dispositivo agregado", { type: "success" });
-      setLoading(false);
+      const savedDevice = editing
+        ? await updateDevice(device.id, {
+            name: name.trim(),
+            customName: customName.trim(),
+            deviceTypeName,
+          })
+        : await addDevice({ name: name.trim(), deviceTypeName });
+      onDeviceSaved(savedDevice);
+      addToast(editing ? "Dispositivo actualizado." : "Dispositivo agregado.", "success");
       onClose();
     } catch (err) {
-      console.error("Error agregando dispositivo:", err);
+      const message =
+        err.response?.data?.description ||
+        err.response?.data?.message ||
+        "No se pudo guardar el dispositivo.";
+      setErrorMessage(message);
+      addToast(message, "error");
+    } finally {
       setLoading(false);
-      addToast("Error agregando dispositivo", { type: "error" });
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-md">
-        <h3 className="text-lg font-semibold text-blue-200 mb-4">
-          ➕ Nuevo dispositivo
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+        <h3 className="mb-1 text-xl font-semibold text-white">
+          {editing ? "Editar dispositivo" : "Registrar dispositivo"}
         </h3>
+        <p className="mb-5 text-sm text-slate-400">
+          {editing
+            ? "Actualiza el nombre o alias de este equipo."
+            : "El agente de escritorio completará los datos del sistema al conectarse."}
+        </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 rounded bg-gray-700 text-white outline-none"
-            required
-          />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block text-sm font-medium text-slate-300">
+            Nombre del dispositivo
+            <input
+              type="text"
+              placeholder="Ej. PC oficina"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:border-blue-400"
+              maxLength={100}
+              required
+            />
+          </label>
+          <label className="block text-sm font-medium text-slate-300">
+            Tipo de dispositivo
+            <select
+              value={deviceTypeName}
+              onChange={(e) => setDeviceTypeName(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:border-blue-400"
+            >
+              <option value="Escritorio">Escritorio</option>
+              <option value="Laptop">Laptop</option>
+              <option value="Móvil">Móvil</option>
+            </select>
+          </label>
+          {editing && (
+            <label className="block text-sm font-medium text-slate-300">
+              Alias (opcional)
+              <input
+                type="text"
+                placeholder="Ej. Mi estación de trabajo"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:border-blue-400"
+                maxLength={100}
+              />
+            </label>
+          )}
 
-          <input
-            type="text"
-            placeholder="Tipo"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="w-full p-2 rounded bg-gray-700 text-white outline-none"
-            required
-          />
+          {errorMessage && (
+            <p role="alert" className="rounded-lg bg-red-950/70 px-3 py-2 text-sm text-red-200">
+              {errorMessage}
+            </p>
+          )}
 
-          <div className="flex justify-end gap-2 mt-4">
+          <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer bg-gray-500 px-4 py-2 rounded-lg text-white hover:bg-gray-600 transition"
+              className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
             >
               Cancelar
             </button>
-              <LoadingButton type="submit" isLoading={loading}>
-                Guardar
-              </LoadingButton>
+            <LoadingButton type="submit" isLoading={loading} className="rounded-lg bg-blue-500 px-4 py-2 font-semibold text-white hover:bg-blue-400 disabled:opacity-50">
+              {editing ? "Guardar cambios" : "Registrar"}
+            </LoadingButton>
           </div>
         </form>
       </div>
