@@ -1,10 +1,8 @@
 import axiosInstance from "../config/axiosConfig";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 export const getDevices = async () => {
   try {
-    const response = await axiosInstance.get(`${API_URL}/devices/me`);
+    const response = await axiosInstance.get("/devices/me");
     return response.data;
   } catch (error) {
     console.error("Error obteniendo devices:", error);
@@ -14,7 +12,7 @@ export const getDevices = async () => {
 
 export const updateDevice = async (deviceId, deviceData) => {
   try {
-    const response = await axiosInstance.put(`${API_URL}/devices`, deviceData, {
+    const response = await axiosInstance.put("/devices", deviceData, {
       params: { id: deviceId },
     });
     return response.data;
@@ -26,7 +24,7 @@ export const updateDevice = async (deviceId, deviceData) => {
 
 export const deleteDevice = async (deviceId) => {
   try {
-    await axiosInstance.delete(`${API_URL}/devices`, { params: { id: deviceId } });
+    await axiosInstance.delete("/devices", { params: { id: deviceId } });
   } catch (error) {
     console.error("Error eliminando dispositivo:", error);
     throw error;
@@ -35,7 +33,7 @@ export const deleteDevice = async (deviceId) => {
 
 export const getDeviceSpecs = async (deviceId) => {
   try {
-    const response = await axiosInstance.get(`${API_URL}/device-specs/${deviceId}`);
+    const response = await axiosInstance.get(`/device-specs/${deviceId}`);
     return response.data;
   } catch (error) {
     console.error("Error obteniendo especificaciones:", error);

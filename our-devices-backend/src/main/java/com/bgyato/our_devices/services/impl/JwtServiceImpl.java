@@ -39,7 +39,9 @@ public class JwtServiceImpl {
     }
 
     private Key getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SecurityConstants.JWT_KEY);
+        String jwtKey = System.getenv("JWT_KEY");
+        byte[] keyBytes = Decoders.BASE64.decode(
+                jwtKey == null || jwtKey.isBlank() ? SecurityConstants.JWT_KEY : jwtKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

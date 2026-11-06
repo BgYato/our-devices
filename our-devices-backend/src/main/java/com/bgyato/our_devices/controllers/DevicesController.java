@@ -18,7 +18,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/devices")
 @AllArgsConstructor
-@CrossOrigin("http://localhost:5173/")
 public class DevicesController {
 
     private final IDeviceService deviceService;

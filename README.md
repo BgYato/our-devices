@@ -55,6 +55,62 @@ our-devices/
 
 ## ⚙️ Instalación
 
+### 🐳 Docker y Cloudflare Tunnel
+
+Se pueden ejecutar la API, MySQL y la web con Docker Compose. El cliente de escritorio y la app móvil siguen ejecutándose en sus dispositivos; para conectarlos remotamente, configura su URL de API con el dominio público del túnel.
+
+1. Instala e inicia Docker Desktop.
+2. En la raíz del repositorio, crea el archivo `.env` a partir de la plantilla:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+3. En `.env`, establece una contraseña segura para MySQL y genera una clave JWT aleatoria en Base64 (32 bytes). En PowerShell:
+
+   ```powershell
+   $bytes = New-Object byte[] 32
+   [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+   [Convert]::ToBase64String($bytes)
+   ```
+
+   Copia el resultado en `JWT_KEY`. No compartas ni subas `.env` al repositorio: contiene secretos.
+4. Construye e inicia la aplicación:
+
+   ```powershell
+   docker compose up --build -d
+   ```
+
+   La web queda disponible localmente en `http://localhost:8081`. MySQL y la API solo son accesibles dentro de la red de Docker; Nginx publica y reenvía las rutas de API necesarias. Para usar el cliente de escritorio en este mismo equipo, cambia `api_url` en `our-devices-client/config.json` a `http://localhost:8081`.
+5. Para publicar la web, crea un túnel en Cloudflare Zero Trust y copia su token en `CLOUDFLARE_TUNNEL_TOKEN` dentro de `.env`. En la configuración del túnel, agrega un **Public Hostname** para tu dominio y configura el servicio de origen como `http://frontend:80`. Este nombre funciona porque `cloudflared` y `frontend` comparten la red de Compose.
+6. Inicia también el servicio del túnel:
+
+   ```powershell
+   docker compose --profile tunnel up --build -d
+   ```
+
+   Tu dominio servirá la web y la API bajo el mismo origen, usando HTTPS administrado por Cloudflare. Configura `api_url` del cliente de escritorio y `EXPO_PUBLIC_API_URL` de la app móvil con `https://tu-dominio`; así podrán llamar a la API aunque estén fuera de tu red. No configures un hostname público que apunte directamente a MySQL ni publiques el puerto 8080.
+
+Para detener los contenedores, usa `docker compose down`. Los datos sobreviven en el volumen `mysql_data`; para eliminarlos permanentemente habría que borrar también ese volumen.
+
+### 🧰 Panel de desarrollo y Docker en Windows
+
+Puedes abrir el panel interactivo desde PowerShell, en la raíz del proyecto:
+
+```powershell
+.\admin.ps1
+```
+
+Si la política de ejecución de PowerShell bloquea el script, puedes permitirlo solo para ese proceso:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\admin.ps1
+```
+
+La opción **Desarrollo local** abre ventanas separadas para el backend y el frontend. El backend usa la conexión local que ya está en `our-devices-backend/src/main/resources/application.yml` (`localhost:3306`, base `our_devices`, usuario `root`); asegúrate de que tu MySQL de Windows esté iniciado y que las credenciales coincidan. El frontend usa `http://localhost:8080` como API y queda en `http://localhost:5173`. Este modo no usa ni modifica la base de datos del volumen Docker.
+
+Las demás opciones permiten iniciar, reconstruir, reiniciar, consultar logs o detener los contenedores. La opción de Cloudflare requiere el token en `CLOUDFLARE_TUNNEL_TOKEN` dentro del `.env` de la raíz. Detener Docker conserva `mysql_data`; no uses `docker compose down -v` salvo que quieras borrar permanentemente la base de datos de Docker.
+
 ### 💻 Cliente de escritorio
 ```bash
 cd our-devices-client
