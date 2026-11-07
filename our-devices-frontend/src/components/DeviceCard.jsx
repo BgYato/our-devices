@@ -1,36 +1,8 @@
-function MetricBar({ label, value, color = "bg-blue-400" }) {
-  const numericValue = Number(value);
-  const hasValue = value !== null && value !== undefined && value !== "" && Number.isFinite(numericValue);
-  const boundedValue = hasValue ? Math.max(0, Math.min(100, numericValue)) : 0;
-
-  return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className="text-xs font-semibold tabular-nums text-slate-200">
-          {hasValue ? `${Math.round(boundedValue)}%` : "Sin datos"}
-        </p>
-      </div>
-      <div
-        className="h-1.5 overflow-hidden rounded-full bg-slate-700/80"
-        role="progressbar"
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={boundedValue}
-      >
-        <div
-          className={`h-full rounded-full transition-[width] duration-500 ${color}`}
-          style={{ width: `${boundedValue}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function DeviceCard({ device, onShowLocation, onEdit, onDelete }) {
   const telemetry = device.telemetry;
-  const online = device.status ? device.status === "online" : device.isOnline;
+  const online = device.status
+    ? device.status.toLowerCase() === "online"
+    : Boolean(device.isOnline);
   const battery = telemetry?.batteryLevel ?? device.batteryLevel;
   const displayName = device.customName || device.name || "Sin nombre";
   const deviceTypeName =
@@ -43,21 +15,34 @@ function DeviceCard({ device, onShowLocation, onEdit, onDelete }) {
   const lastSeen = device.lastSeen
     ? new Date(device.lastSeen).toLocaleString()
     : "Sin conexión registrada";
+  const metrics = [
+    telemetry?.cpuUsagePercent != null
+      ? { label: "CPU", value: `${Math.round(telemetry.cpuUsagePercent)}%` }
+      : null,
+    telemetry?.memoryUsagePercent != null
+      ? { label: "Memoria", value: `${Math.round(telemetry.memoryUsagePercent)}%` }
+      : null,
+    battery != null ? { label: "Batería", value: `${Math.round(battery)}%` } : null,
+    telemetry?.networkType || telemetry?.wifiSsid
+      ? {
+          label: "Red",
+          value: [telemetry.networkType || "Wi-Fi", telemetry.wifiSsid]
+            .filter(Boolean)
+            .join(" · "),
+        }
+      : null,
+  ].filter(Boolean).slice(0, 2);
 
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/20 transition duration-200 hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-blue-950/30">
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 opacity-70" />
+    <article className="flex h-[276px] flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/20 transition duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-blue-950/30">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             {deviceTypeName}
           </p>
-          <h3 className="mt-2 truncate text-lg font-semibold text-white" title={displayName}>
+          <h3 className="mt-1.5 truncate text-lg font-semibold text-white" title={displayName}>
             {displayName}
           </h3>
-          <p className="mt-1 truncate text-sm text-slate-400">
-            {device.hostname || device.name || "Nombre del sistema no disponible"}
-          </p>
         </div>
         <span
           className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
@@ -71,46 +56,44 @@ function DeviceCard({ device, onShowLocation, onEdit, onDelete }) {
         </span>
       </div>
 
-      <p className="mt-3 text-sm text-slate-400">
-        {[device.osName, device.osVersion].filter(Boolean).join(" ") || "Sistema operativo sin datos"}
+      <p className="mt-2 truncate text-xs text-slate-400" title={[device.hostname, device.osName, device.osVersion].filter(Boolean).join(" · ")}>
+        {[device.hostname, device.osName, device.osVersion].filter(Boolean).join(" · ") ||
+          "Sin información del sistema"}
       </p>
 
-      <div className="mt-4 space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3.5">
-        <MetricBar label="Uso de CPU" value={telemetry?.cpuUsagePercent} color="bg-cyan-400" />
-        <MetricBar label="Uso de memoria" value={telemetry?.memoryUsagePercent} color="bg-violet-400" />
-        <MetricBar label="Batería" value={battery} color="bg-emerald-400" />
-      </div>
+      {metrics.length ? (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {metrics.map((metric) => (
+            <div
+              key={metric.label}
+              className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2"
+            >
+              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                {metric.label}
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold text-slate-200" title={metric.value}>
+                {metric.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 flex min-h-16 items-center rounded-xl border border-dashed border-slate-800 px-3 text-xs text-slate-500">
+          Sin métricas recientes
+        </div>
+      )}
 
-      <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 px-3.5 py-2.5">
-        <span className="text-xs text-slate-500">Almacenamiento libre</span>
-        <span className="text-sm font-semibold tabular-nums text-slate-200">
-          {telemetry?.freeStorageMB == null
-            ? "Sin datos"
-            : `${(telemetry.freeStorageMB / 1024).toFixed(1)} GB${
-                telemetry.totalStorageMB == null
-                  ? ""
-                  : ` de ${(telemetry.totalStorageMB / 1024).toFixed(1)} GB`
-              }`}
-        </span>
-      </div>
-      {telemetry?.totalMemoryMB != null ? (
-        <p className="mt-2 text-xs text-slate-500">
-          Memoria RAM: {(telemetry.totalMemoryMB / 1024).toFixed(1)} GB
-        </p>
-      ) : null}
-
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-800 pt-3">
-        <p className="min-w-0 text-xs text-slate-500" title={lastSeen}>
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-800 pt-3">
+        <p className="min-w-0 truncate text-[11px] text-slate-500" title={lastSeen}>
           Última señal: {lastSeen}
         </p>
-        <p className="shrink-0 text-xs text-slate-500">{device.ipAddress || ""}</p>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex gap-2">
         <button
           type="button"
           onClick={() => onShowLocation(device)}
-          className="rounded-lg border border-cyan-800/70 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-950/50"
+          className="flex-1 rounded-lg border border-cyan-800/70 bg-cyan-950/30 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-950/60"
         >
           Ver detalles
         </button>

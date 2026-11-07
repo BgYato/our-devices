@@ -6,6 +6,12 @@ import Navbar from "../components/Navbar";
 import DevicesGrid from "../components/DevicesGrid";
 import { useToast } from "../context/ToastContext";
 
+function isOnline(device) {
+  return device.status
+    ? device.status.toLowerCase() === "online"
+    : Boolean(device.isOnline);
+}
+
 function Dashboard() {
   const [user, setUser] = useState(null);
   const [devices, setDevices] = useState([]);
@@ -16,6 +22,9 @@ function Dashboard() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const requestInFlight = useRef(false);
+  const sortedDevices = [...devices].sort(
+    (first, second) => Number(isOnline(second)) - Number(isOnline(first))
+  );
 
   const refreshDeviceList = useCallback(async () => {
     if (requestInFlight.current) return;
@@ -165,17 +174,13 @@ function Dashboard() {
             },
             {
               label: "En línea",
-              value: devices.filter((device) =>
-                device.status ? device.status === "online" : Boolean(device.isOnline)
-              ).length,
+              value: devices.filter(isOnline).length,
               accent: "text-emerald-300",
               dot: "bg-emerald-400",
             },
             {
               label: "Desconectados",
-              value: devices.filter((device) =>
-                device.status ? device.status !== "online" : !device.isOnline
-              ).length,
+              value: devices.filter((device) => !isOnline(device)).length,
               accent: "text-slate-300",
               dot: "bg-slate-500",
             },
@@ -201,7 +206,7 @@ function Dashboard() {
           </div>
         ) : (
           <DevicesGrid
-            devices={devices}
+            devices={sortedDevices}
             onDeviceSaved={handleDeviceSaved}
             onDeviceDeleted={handleDeviceDeleted}
           />

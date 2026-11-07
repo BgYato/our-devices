@@ -39,11 +39,19 @@ function getDeviceType(device) {
   );
 }
 
+function hasInfoValue(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return false;
+  return !["no disponible", "unknown cpu", "unknown gpu", "integrated graphics"].includes(
+    String(value).trim().toLowerCase(),
+  );
+}
+
 function Info({ label, value }) {
+  if (!hasInfoValue(value)) return null;
   return (
     <div className="min-w-0 border-b border-slate-800/80 py-2.5 last:border-0">
       <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="mt-1 break-words text-sm text-slate-200">{value || "No disponible"}</dd>
+      <dd className="mt-1 break-words text-sm text-slate-200">{value}</dd>
     </div>
   );
 }
@@ -203,6 +211,29 @@ export default function DeviceLocation() {
   const lowLocationAccuracy = locationAccuracy != null && locationAccuracy > 10_000;
   const formatStorage = (megabytes) =>
     megabytes == null ? null : `${(megabytes / 1024).toFixed(1)} GB`;
+  const hardwareInfoAvailable = [
+    specs?.cpuModel,
+    specs?.cpuCores,
+    specs?.gpuModel,
+    specs?.architecture,
+    specs?.screenResolution,
+    specs?.lastUpdateVersion,
+  ].some(hasInfoValue);
+  const resourcesInfoAvailable = [
+    telemetry?.cpuUsagePercent,
+    telemetry?.memoryUsagePercent,
+    telemetry?.batteryLevel ?? device?.batteryLevel,
+    formatStorage(telemetry?.freeStorageMB),
+    formatStorage(telemetry?.totalStorageMB),
+    formatStorage(telemetry?.totalMemoryMB),
+    telemetry?.networkType,
+    telemetry?.wifiSsid,
+    telemetry?.audioVolumePercent,
+  ].some(hasInfoValue);
+  const locationInfoAvailable =
+    hasLocation ||
+    hasInfoValue(locationAccuracy) ||
+    hasInfoValue(formatDate(telemetry?.locationCapturedAt));
 
   return (
     <div className="min-h-screen bg-[#080e1a] text-slate-100">
@@ -362,7 +393,7 @@ export default function DeviceLocation() {
                   </dl>
                 </section>
 
-                <section className="mt-4">
+                {resourcesInfoAvailable ? <section className="mt-4">
                   <h3 className="text-[10px] font-semibold uppercase tracking-wider text-blue-300">
                     Estado y recursos
                   </h3>
@@ -382,10 +413,28 @@ export default function DeviceLocation() {
                     <Info label="Almacenamiento libre" value={formatStorage(telemetry?.freeStorageMB)} />
                     <Info label="Almacenamiento total" value={formatStorage(telemetry?.totalStorageMB)} />
                     <Info label="RAM total" value={formatStorage(telemetry?.totalMemoryMB)} />
+                    <Info
+                      label="Tipo de red"
+                      value={
+                        telemetry?.networkType
+                          ? `${telemetry.networkType}${telemetry.wifiSsid ? ` · ${telemetry.wifiSsid}` : ""}`
+                          : null
+                      }
+                    />
+                    <Info
+                      label="Volumen de audio"
+                      value={
+                        telemetry?.audioVolumePercent == null
+                          ? null
+                          : `${Math.round(telemetry.audioVolumePercent)}%${
+                              telemetry.audioMuted ? " · silenciado" : ""
+                            }`
+                      }
+                    />
                   </dl>
-                </section>
+                </section> : null}
 
-                <section className="mt-4">
+                {specsLoading || specsError || hardwareInfoAvailable ? <section className="mt-4">
                   <h3 className="text-[10px] font-semibold uppercase tracking-wider text-blue-300">
                     Hardware
                   </h3>
@@ -403,9 +452,9 @@ export default function DeviceLocation() {
                       <Info label="Versión del agente" value={specs?.lastUpdateVersion} />
                     </dl>
                   )}
-                </section>
+                </section> : null}
 
-                <section className="mt-4 border-t border-slate-800 pt-3">
+                {locationInfoAvailable ? <section className="mt-4 border-t border-slate-800 pt-3">
                   <h3 className="text-[10px] font-semibold uppercase tracking-wider text-blue-300">
                     Ubicación compartida
                   </h3>
@@ -431,7 +480,7 @@ export default function DeviceLocation() {
                     La ubicación se comparte solo con el permiso y consentimiento del usuario.
                     Mapa © OpenStreetMap contributors.
                   </p>
-                </section>
+                </section> : null}
               </>
             ) : (
               <p className="py-6 text-center text-sm text-slate-400">
