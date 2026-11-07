@@ -13,6 +13,11 @@ export type Telemetry = {
   freeStorageMB: number | null;
   totalStorageMB: number | null;
   totalMemoryMB: number | null;
+  networkType: string | null;
+  wifiSsid: string | null;
+  audioVolumePercent: number | null;
+  audioMuted: boolean | null;
+  wifiSsidSharingEnabled: boolean | null;
   latitude: number | null;
   longitude: number | null;
   locationAccuracyMeters: number | null;
@@ -34,4 +39,11 @@ export type DeviceRecord = {
   status?: string | null;
   lastSeen?: string | null;
   telemetry?: Telemetry | null;
+};
+
+export type DeviceLocation = {
+  device: DeviceRecord;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
 };

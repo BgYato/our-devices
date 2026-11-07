@@ -86,7 +86,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setUser(currentUser);
         }
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           await SecureStore.deleteItemAsync(TOKEN_KEY);
         } else if (active) {
           setRestoreError(

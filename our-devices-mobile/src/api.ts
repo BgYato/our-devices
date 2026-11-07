@@ -53,11 +53,11 @@ export async function apiRequest<T = void>(
   } catch {
     if (timedOut) {
       throw new Error(
-        "La conexión tardó más de 12 segundos. Comprueba que la app móvil y el backend estén en la misma red Wi-Fi, y que el firewall permita el puerto 8080.",
+        "La API tardó más de 12 segundos en responder. Verifica EXPO_PUBLIC_API_URL y que el servidor sea accesible desde esta red.",
       );
     }
     throw new Error(
-      "No se pudo conectar con la API. Comprueba que el backend esté activo, que la dirección configurada sea la IP LAN del computador y que el teléfono use la misma red Wi-Fi.",
+      "No se pudo conectar con la API. Verifica EXPO_PUBLIC_API_URL y que el backend o el túnel de Cloudflare estén activos.",
     );
   } finally {
     clearTimeout(timeoutId);

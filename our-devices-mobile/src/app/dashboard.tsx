@@ -2,8 +2,9 @@ import * as Battery from "expo-battery";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system";
 import * as Location from "expo-location";
+import * as Network from "expo-network";
 import * as SecureStore from "expo-secure-store";
-import { Redirect, router } from "expo-router";
+import { Redirect, router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,11 +18,16 @@ import {
   View,
 } from "react-native";
 import { ApiError, apiRequest } from "../api";
+import {
+  getDeviceMetrics,
+  isDeviceMetricsAvailable,
+} from "../../modules/device-metrics";
 import { useSession } from "../session";
 import { DeviceRecord, User } from "../types";
 
 const DEVICE_KEY_PREFIX = "ourdevices.registered-device.";
 const LOCATION_KEY_PREFIX = "ourdevices.location-sharing.";
+const WIFI_SSID_KEY_PREFIX = "ourdevices.wifi-ssid-sharing.";
 const SYNC_INTERVAL_MS = 30_000;
 const BYTES_PER_MB = 1024 * 1024;
 
@@ -51,6 +57,23 @@ function getPhoneInfo() {
     osName: Device.osName || Platform.OS,
     osVersion: Device.osVersion || "Desconocida",
   };
+}
+
+function getNetworkLabel(value: string | null | undefined): string {
+  const labels: Record<string, string> = {
+    WIFI: "Wi-Fi",
+    CELLULAR: "Datos móviles",
+    ETHERNET: "Ethernet",
+    NONE: "Sin conexión",
+    UNKNOWN: "Desconocida",
+  };
+  return value ? labels[value] || value : "Sin datos";
+}
+
+function isOnline(device: DeviceRecord) {
+  return device.status
+    ? device.status.toLowerCase() === "online"
+    : Boolean(device.isOnline);
 }
 
 async function getBatteryPercent(): Promise<number | null> {
@@ -123,7 +146,9 @@ async function sendHeartbeat(
   token: string,
   deviceId: string,
   locationSharingEnabled: boolean,
+  wifiSsidSharingEnabled: boolean,
 ): Promise<string | null> {
+  const canShareWifiSsid = wifiSsidSharingEnabled && isDeviceMetricsAvailable;
   const storage = getStorageCapacity();
   let location: {
     latitude: number | null;
@@ -150,6 +175,25 @@ async function sendHeartbeat(
     }
   }
 
+  let networkType: string | null = null;
+  try {
+    const network = await Network.getNetworkStateAsync();
+    networkType = network.type ?? null;
+  } catch (error) {
+    console.warn("No se pudo consultar el tipo de red:", error);
+  }
+
+  let systemMetrics = {
+    wifiSsid: null as string | null,
+    audioVolumePercent: null as number | null,
+    audioMuted: null as boolean | null,
+  };
+  try {
+    systemMetrics = await getDeviceMetrics(canShareWifiSsid);
+  } catch (error) {
+    console.warn("No se pudieron consultar las métricas nativas del dispositivo:", error);
+  }
+
   await apiRequest(`/devices/${deviceId}/heartbeat`, {
     method: "POST",
     token,
@@ -161,6 +205,11 @@ async function sendHeartbeat(
       totalStorageMB: storage.totalStorageMB,
       totalMemoryMB:
         Device.totalMemory != null ? Math.floor(Device.totalMemory / BYTES_PER_MB) : null,
+      networkType,
+      wifiSsid: systemMetrics.wifiSsid,
+      wifiSsidSharingEnabled: canShareWifiSsid,
+      audioVolumePercent: systemMetrics.audioVolumePercent,
+      audioMuted: systemMetrics.audioMuted,
       latitude: location.latitude,
       longitude: location.longitude,
       locationAccuracyMeters: location.accuracyMeters,
@@ -179,13 +228,12 @@ function Metric({
   value: number | null | undefined;
   color: string;
 }) {
-  const hasValue = value !== null && value !== undefined;
-  const amount = hasValue ? Math.max(0, Math.min(100, value)) : 0;
+  const amount = Math.max(0, Math.min(100, value ?? 0));
   return (
     <View style={styles.metric}>
       <View style={styles.metricHeading}>
         <Text style={styles.metricLabel}>{label}</Text>
-        <Text style={styles.metricValue}>{hasValue ? `${Math.round(amount)}%` : "Sin datos"}</Text>
+        <Text style={styles.metricValue}>{`${Math.round(amount)}%`}</Text>
       </View>
       <View style={styles.track}>
         <View style={[styles.fill, { width: `${amount}%`, backgroundColor: color }]} />
@@ -195,7 +243,10 @@ function Metric({
 }
 
 function DeviceCard({ device }: { device: DeviceRecord }) {
-  const online = device.status ? device.status === "online" : Boolean(device.isOnline);
+  const [expanded, setExpanded] = useState(false);
+  const online = device.status
+    ? device.status.toLowerCase() === "online"
+    : Boolean(device.isOnline);
   const telemetry = device.telemetry;
   const battery = telemetry?.batteryLevel ?? device.batteryLevel;
   return (
@@ -206,10 +257,6 @@ function DeviceCard({ device }: { device: DeviceRecord }) {
           <Text numberOfLines={1} style={styles.deviceName}>
             {device.customName || device.name || "Sin nombre"}
           </Text>
-          <Text numberOfLines={1} style={styles.deviceSubtitle}>
-            {[device.hostname, device.osName, device.osVersion].filter(Boolean).join(" ") ||
-              "Sistema sin datos"}
-          </Text>
         </View>
         <View style={[styles.statusPill, online ? styles.onlinePill : styles.offlinePill]}>
           <View style={[styles.statusDot, online ? styles.onlineDot : styles.offlineDot]} />
@@ -218,37 +265,78 @@ function DeviceCard({ device }: { device: DeviceRecord }) {
           </Text>
         </View>
       </View>
-      <View style={styles.metrics}>
-        <Metric label="CPU" value={telemetry?.cpuUsagePercent} color={colors.cyan} />
-        <Metric label="Memoria" value={telemetry?.memoryUsagePercent} color={colors.purple} />
-        <Metric label="Batería" value={battery} color={colors.green} />
-      </View>
-      <Text style={styles.deviceData}>
-        Almacenamiento libre:{" "}
-        {telemetry?.freeStorageMB == null
-          ? "Sin datos"
-          : `${(telemetry.freeStorageMB / 1024).toFixed(1)} GB`}
-        {telemetry?.totalStorageMB == null
-          ? ""
-          : ` de ${(telemetry.totalStorageMB / 1024).toFixed(1)} GB`}
-      </Text>
-      <Text style={styles.deviceData}>
-        Memoria RAM:{" "}
-        {telemetry?.totalMemoryMB == null
-          ? "Sin datos"
-          : `${(telemetry.totalMemoryMB / 1024).toFixed(1)} GB`}
-      </Text>
-      {telemetry?.latitude != null && telemetry.longitude != null ? (
-        <Text style={styles.deviceData}>
-          Ubicación: {telemetry.latitude.toFixed(5)}, {telemetry.longitude.toFixed(5)}
-          {telemetry.locationCapturedAt
-            ? ` · ${new Date(telemetry.locationCapturedAt).toLocaleString()}`
-            : ""}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        onPress={() => setExpanded((current) => !current)}
+        style={styles.detailsToggle}
+      >
+        <Text style={styles.detailsToggleText}>
+          {expanded ? "Ocultar detalles" : "Ver detalles"}
         </Text>
+        <Text style={styles.detailsToggleIcon}>{expanded ? "−" : "+"}</Text>
+      </Pressable>
+      {expanded ? (
+        <View style={styles.expandedDetails}>
+          {telemetry?.cpuUsagePercent != null || telemetry?.memoryUsagePercent != null ||
+          battery != null || telemetry?.audioVolumePercent != null ? (
+            <View style={styles.metrics}>
+              {telemetry?.cpuUsagePercent != null ? (
+                <Metric label="CPU" value={telemetry.cpuUsagePercent} color={colors.cyan} />
+              ) : null}
+              {telemetry?.memoryUsagePercent != null ? (
+                <Metric label="Memoria" value={telemetry.memoryUsagePercent} color={colors.purple} />
+              ) : null}
+              {battery != null ? <Metric label="Batería" value={battery} color={colors.green} /> : null}
+              {telemetry?.audioVolumePercent != null ? (
+                <Metric label="Volumen de audio" value={telemetry.audioVolumePercent} color={colors.blue} />
+              ) : null}
+            </View>
+          ) : null}
+          {telemetry?.freeStorageMB != null ? (
+            <Text style={styles.deviceData}>
+              Almacenamiento libre: {(telemetry.freeStorageMB / 1024).toFixed(1)} GB
+              {telemetry.totalStorageMB != null
+                ? ` de ${(telemetry.totalStorageMB / 1024).toFixed(1)} GB`
+                : ""}
+            </Text>
+          ) : null}
+          {telemetry?.totalMemoryMB != null ? (
+            <Text style={styles.deviceData}>
+              Memoria RAM: {(telemetry.totalMemoryMB / 1024).toFixed(1)} GB
+            </Text>
+          ) : null}
+          {telemetry?.networkType || telemetry?.wifiSsid ? (
+            <Text style={styles.deviceData}>
+              Red: {getNetworkLabel(telemetry.networkType)}
+              {telemetry.wifiSsid
+                ? ` · ${telemetry.wifiSsid}`
+                : telemetry.wifiSsidSharingEnabled
+                  ? " · nombre no disponible"
+                  : ""}
+            </Text>
+          ) : null}
+          {telemetry?.audioVolumePercent != null && telemetry.audioMuted ? (
+            <Text style={styles.deviceData}>Salida de audio silenciada</Text>
+          ) : null}
+          {telemetry?.latitude != null && telemetry.longitude != null ? (
+            <Text style={styles.deviceData}>
+              Ubicación: {telemetry.latitude.toFixed(5)}, {telemetry.longitude.toFixed(5)}
+              {telemetry.locationCapturedAt
+                ? ` · ${new Date(telemetry.locationCapturedAt).toLocaleString()}`
+                : ""}
+            </Text>
+          ) : null}
+          {device.hostname || device.osName || device.osVersion ? (
+            <Text style={styles.deviceData}>
+              {[device.hostname, device.osName, device.osVersion].filter(Boolean).join(" ")}
+            </Text>
+          ) : null}
+          <Text style={styles.lastSeen}>
+            Última señal: {device.lastSeen ? new Date(device.lastSeen).toLocaleString() : "Sin registro"}
+          </Text>
+        </View>
       ) : null}
-      <Text style={styles.lastSeen}>
-        Última señal: {device.lastSeen ? new Date(device.lastSeen).toLocaleString() : "Sin registro"}
-      </Text>
     </View>
   );
 }
@@ -261,52 +349,74 @@ export default function DashboardRoute() {
   const [locationMessage, setLocationMessage] = useState("");
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(false);
   const [locationPreferenceUserId, setLocationPreferenceUserId] = useState<string | null>(null);
-  const locationPreferenceLoaded = Boolean(user && locationPreferenceUserId === user.id);
+  const [wifiSsidSharingEnabled, setWifiSsidSharingEnabled] = useState(false);
+  const [wifiPreferenceUserId, setWifiPreferenceUserId] = useState<string | null>(null);
+  const preferencesLoaded = Boolean(
+    user &&
+      locationPreferenceUserId === user.id &&
+      wifiPreferenceUserId === user.id,
+  );
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const syncInProgress = useRef(false);
   const mobileDeviceId = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    let active = true;
-    SecureStore.getItemAsync(`${LOCATION_KEY_PREFIX}${user.id}`)
-      .then((value) => {
-        if (!active) return;
-        setLocationSharingEnabled(value === "true");
-        setLocationPreferenceUserId(user.id);
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setLocationSharingEnabled(false);
-        setErrorMessage(
-          error instanceof Error
-            ? `No se pudo leer la preferencia de ubicación: ${error.message}`
-            : "No se pudo leer la preferencia de ubicación.",
-        );
-      })
-      .finally(() => {
-        if (active) setLocationPreferenceUserId(user.id);
-      });
-    return () => {
-      active = false;
-    };
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      let active = true;
+      setLocationPreferenceUserId(null);
+      setWifiPreferenceUserId(null);
+      Promise.all([
+        SecureStore.getItemAsync(`${LOCATION_KEY_PREFIX}${user.id}`),
+        SecureStore.getItemAsync(`${WIFI_SSID_KEY_PREFIX}${user.id}`),
+      ])
+        .then(([locationValue, wifiValue]) => {
+          if (!active) return;
+          setLocationSharingEnabled(locationValue === "true");
+          setWifiSsidSharingEnabled(wifiValue === "true");
+          setLocationPreferenceUserId(user.id);
+          setWifiPreferenceUserId(user.id);
+        })
+        .catch((error: unknown) => {
+          if (!active) return;
+          setLocationSharingEnabled(false);
+          setWifiSsidSharingEnabled(false);
+          setErrorMessage(
+            error instanceof Error
+              ? `No se pudo leer la preferencia de ubicación: ${error.message}`
+              : "No se pudo leer la preferencia de ubicación.",
+          );
+        })
+        .finally(() => {
+          if (active) setLocationPreferenceUserId(user.id);
+          if (active) setWifiPreferenceUserId(user.id);
+        });
+      return () => {
+        active = false;
+      };
+    }, [user]),
+  );
 
   const syncDevices = useCallback(async () => {
-    if (!token || !user || !locationPreferenceLoaded || syncInProgress.current) return;
+    if (!token || !user || !preferencesLoaded || syncInProgress.current) return;
     syncInProgress.current = true;
     setRefreshing(true);
     try {
       const deviceId = await ensureMobileDevice(token, user);
       mobileDeviceId.current = deviceId;
-      const locationError = await sendHeartbeat(token, deviceId, locationSharingEnabled);
+      const locationError = await sendHeartbeat(
+        token,
+        deviceId,
+        locationSharingEnabled,
+        wifiSsidSharingEnabled,
+      );
       const latestDevices = await apiRequest<DeviceRecord[]>("/devices/me", { token });
       setDevices(latestDevices);
       setLastSync(new Date());
       setLocationMessage(locationError || "");
       setErrorMessage("");
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
         await signOut();
         router.replace("/login");
       } else {
@@ -318,7 +428,7 @@ export default function DashboardRoute() {
       syncInProgress.current = false;
       setRefreshing(false);
     }
-  }, [token, user, signOut, locationPreferenceLoaded, locationSharingEnabled]);
+  }, [token, user, signOut, preferencesLoaded, locationSharingEnabled, wifiSsidSharingEnabled]);
 
   const disconnectMobileDevice = useCallback(async () => {
     if (!token || !mobileDeviceId.current) return;
@@ -336,47 +446,8 @@ export default function DashboardRoute() {
     }
   }, [token]);
 
-  const toggleLocationSharing = useCallback(async () => {
-    if (!user) return;
-    if (locationSharingEnabled) {
-      try {
-        await SecureStore.setItemAsync(`${LOCATION_KEY_PREFIX}${user.id}`, "false");
-        setLocationSharingEnabled(false);
-        setLocationMessage(
-          "Ubicación desactivada. El servidor eliminará la posición al recibir la próxima sincronización.",
-        );
-      } catch (error) {
-        setLocationMessage(
-          error instanceof Error
-            ? `No se pudo guardar el cambio: ${error.message}`
-            : "No se pudo guardar el cambio de ubicación.",
-        );
-      }
-      return;
-    }
-
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== "granted") {
-        setLocationMessage(
-          "No se activó la ubicación. Puedes conceder el permiso de ubicación mientras usas la app en los ajustes del teléfono.",
-        );
-        return;
-      }
-      await SecureStore.setItemAsync(`${LOCATION_KEY_PREFIX}${user.id}`, "true");
-      setLocationSharingEnabled(true);
-      setLocationMessage("Ubicación activada. Solo se comparte mientras la app está abierta.");
-    } catch (error) {
-      setLocationMessage(
-        error instanceof Error
-          ? `No se pudo activar la ubicación: ${error.message}`
-          : "No se pudo activar la ubicación.",
-      );
-    }
-  }, [locationSharingEnabled, user]);
-
   useEffect(() => {
-    if (!token || !user || !locationPreferenceLoaded) return;
+    if (!token || !user || !preferencesLoaded) return;
     let interval: ReturnType<typeof setInterval> | undefined;
     let currentAppState = AppState.currentState ?? "active";
     const syncIfActive = () => {
@@ -398,14 +469,17 @@ export default function DashboardRoute() {
           clearInterval(interval);
           interval = undefined;
         }
-        if (previousAppState === "active") void disconnectMobileDevice();
+        if (nextState === "background" && previousAppState === "active") {
+          void disconnectMobileDevice();
+        }
       }
     });
     return () => {
       subscription.remove();
       if (interval) clearInterval(interval);
     };
-  }, [token, user, syncDevices, locationPreferenceLoaded, disconnectMobileDevice]);
+  }, [token, user, syncDevices, preferencesLoaded, disconnectMobileDevice]);
+
 
   if (loading) {
     return (
@@ -417,6 +491,10 @@ export default function DashboardRoute() {
   if (!token || !user) return <Redirect href="/login" />;
 
   const fullName = `${user.firstName} ${user.lastName}`.trim();
+  const sortedDevices = [...devices].sort(
+    (first, second) => Number(isOnline(second)) - Number(isOnline(first)),
+  );
+  const onlineDeviceCount = devices.filter(isOnline).length;
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -435,86 +513,70 @@ export default function DashboardRoute() {
             <Text style={styles.greeting}>Hola, {user.firstName || user.username}</Text>
             <Text style={styles.headerHint}>{fullName || user.email}</Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              void (async () => {
-                await disconnectMobileDevice();
-                await signOut();
-                router.replace("/login");
-              })();
-            }}
-            style={styles.logoutButton}
-          >
-            <Text style={styles.logoutText}>Salir</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.syncCard}>
-          <View style={[styles.syncIcon, refreshing && styles.syncIconActive]}>
-            <View style={[styles.statusDot, refreshing ? styles.onlineDot : styles.offlineDot]} />
-          </View>
-          <View style={styles.syncCopy}>
-            <Text style={styles.syncTitle}>
-              {refreshing ? "Sincronizando" : "Sincronización activa"}
-            </Text>
-            <Text style={styles.syncDescription}>
-              Actualización automática cada 30 segundos mientras la app está abierta.
-            </Text>
-            {lastSync ? (
-              <Text style={styles.lastSync}>
-                Última actualización: {lastSync.toLocaleTimeString()}
-              </Text>
-            ) : null}
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/settings")}
+              style={styles.settingsButton}
+            >
+              <Text style={styles.settingsText}>Ajustes</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                void (async () => {
+                  await disconnectMobileDevice();
+                  await signOut();
+                  router.replace("/login");
+                })();
+              }}
+              style={styles.logoutButton}
+            >
+              <Text style={styles.logoutText}>Salir</Text>
+            </Pressable>
           </View>
         </View>
 
-        <View style={styles.locationCard}>
-          <View style={styles.locationCopy}>
-            <Text style={styles.locationTitle}>Compartir ubicación</Text>
-            <Text style={styles.locationDescription}>
-              {locationSharingEnabled
-                ? "Se actualiza mientras la app está abierta. Puedes desactivarla cuando quieras."
-                : "Opcional. No se comparte hasta que lo actives y concedas permiso."}
-            </Text>
-            {locationMessage ? <Text style={styles.locationMessage}>{locationMessage}</Text> : null}
-          </View>
-          <Pressable
-            accessibilityRole="switch"
-            accessibilityState={{ checked: locationSharingEnabled }}
-            disabled={!locationPreferenceLoaded}
-            onPress={() => void toggleLocationSharing()}
-            style={[
-              styles.locationToggle,
-              locationSharingEnabled && styles.locationToggleEnabled,
-              !locationPreferenceLoaded && styles.locationToggleDisabled,
-            ]}
-          >
-            <Text style={styles.locationToggleText}>
-              {locationSharingEnabled ? "Activada" : "Desactivada"}
-            </Text>
-          </Pressable>
+        <View style={styles.syncStatusRow}>
+          <View style={[styles.statusDot, refreshing ? styles.onlineDot : styles.offlineDot]} />
+          <Text style={styles.syncStatusText}>
+            {refreshing
+              ? "Actualizando dispositivos…"
+              : lastSync
+                ? `Actualizado ${lastSync.toLocaleTimeString()}`
+                : "Actualización automática cada 30 s"}
+          </Text>
         </View>
+        {locationMessage ? <Text style={styles.syncNotice}>{locationMessage}</Text> : null}
 
         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
         <View style={styles.listHeading}>
           <View>
             <Text style={styles.sectionTitle}>Tus dispositivos</Text>
             <Text style={styles.sectionSubtitle}>
-              {devices.length} {devices.length === 1 ? "dispositivo registrado" : "dispositivos registrados"}
+              {onlineDeviceCount} en línea · {devices.length - onlineDeviceCount} desconectados
             </Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            disabled={refreshing}
-            onPress={() => void syncDevices()}
-            style={styles.refreshButton}
-          >
-            <Text style={styles.refreshText}>Actualizar</Text>
-          </Pressable>
+          <View style={styles.listActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/map")}
+              style={styles.mapButton}
+            >
+              <Text style={styles.mapButtonText}>Mapa</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={refreshing}
+              onPress={() => void syncDevices()}
+              style={styles.refreshButton}
+            >
+              <Text style={styles.refreshText}>Actualizar</Text>
+            </Pressable>
+          </View>
         </View>
         {devices.length ? (
-          devices.map((device) => <DeviceCard device={device} key={device.id} />)
+          sortedDevices.map((device) => <DeviceCard device={device} key={device.id} />)
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>Aún no hay dispositivos</Text>
@@ -568,53 +630,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   logoutText: { color: colors.secondary, fontSize: 13, fontWeight: "600" },
-  syncCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 13,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-  },
-  syncIcon: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: colors.surfaceRaised,
-  },
-  syncIconActive: { backgroundColor: "#064e3b" },
-  syncCopy: { flex: 1 },
-  syncTitle: { color: colors.text, fontSize: 14, fontWeight: "700" },
-  syncDescription: { marginTop: 4, color: colors.secondary, fontSize: 12, lineHeight: 18 },
-  lastSync: { marginTop: 7, color: colors.muted, fontSize: 11 },
-  locationCard: {
+  syncStatusRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginTop: 12,
-    padding: 15,
+    gap: 8,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  syncStatusText: { color: colors.muted, fontSize: 11 },
+  syncNotice: { marginBottom: 8, color: colors.secondary, fontSize: 11, lineHeight: 16 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  settingsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 11,
     backgroundColor: colors.surface,
   },
-  locationCopy: { flex: 1 },
-  locationTitle: { color: colors.text, fontSize: 13, fontWeight: "700" },
-  locationDescription: { marginTop: 4, color: colors.secondary, fontSize: 11, lineHeight: 16 },
-  locationMessage: { marginTop: 5, color: colors.blue, fontSize: 11, lineHeight: 15 },
-  locationToggle: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceRaised,
-  },
-  locationToggleEnabled: { backgroundColor: "#064e3b" },
-  locationToggleDisabled: { opacity: 0.5 },
-  locationToggleText: { color: colors.text, fontSize: 10, fontWeight: "700" },
+  settingsText: { color: colors.blue, fontSize: 13, fontWeight: "700" },
   deviceData: { marginTop: 8, color: colors.secondary, fontSize: 11, lineHeight: 16 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   onlineDot: { backgroundColor: colors.green },
@@ -628,6 +662,16 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: colors.text, fontSize: 20, fontWeight: "700" },
   sectionSubtitle: { marginTop: 3, color: colors.muted, fontSize: 12 },
+  listActions: { flexDirection: "row", alignItems: "center", gap: 7 },
+  mapButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceRaised,
+  },
+  mapButtonText: { color: colors.blue, fontSize: 12, fontWeight: "700" },
   refreshButton: {
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -660,7 +704,18 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   deviceName: { marginTop: 6, color: colors.text, fontSize: 16, fontWeight: "700" },
-  deviceSubtitle: { marginTop: 4, color: colors.secondary, fontSize: 12 },
+  detailsToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  detailsToggleText: { color: colors.blue, fontSize: 12, fontWeight: "700" },
+  detailsToggleIcon: { color: colors.blue, fontSize: 18, fontWeight: "600" },
+  expandedDetails: { marginTop: 4 },
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
