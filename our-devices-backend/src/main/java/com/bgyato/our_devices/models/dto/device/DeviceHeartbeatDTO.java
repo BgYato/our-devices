@@ -6,6 +6,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -36,6 +37,20 @@ public class DeviceHeartbeatDTO {
 
     @PositiveOrZero
     private Long totalMemoryMB;
+
+    @Size(max = 32)
+    private String networkType;
+
+    @Size(max = 128)
+    private String wifiSsid;
+
+    @Min(0)
+    @Max(100)
+    private Integer audioVolumePercent;
+
+    private Boolean audioMuted;
+
+    private Boolean wifiSsidSharingEnabled;
 
     @DecimalMin("-90.0")
     @DecimalMax("90.0")

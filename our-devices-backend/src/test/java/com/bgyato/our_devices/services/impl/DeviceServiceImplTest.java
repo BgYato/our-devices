@@ -125,6 +125,45 @@ class DeviceServiceImplTest {
     }
 
     @Test
+    void heartbeatStoresAudioAndNetworkMetricsAndClearsOptedOutSsid() {
+        DeviceEntity device = deviceOwnedBy("owner@example.com");
+        DeviceTelemetryEntity currentTelemetry = DeviceTelemetryEntity.builder()
+                .id("telemetry-1")
+                .device(device)
+                .build();
+        when(deviceRepository.findByIdAndIsDeletedFalse("device-1")).thenReturn(Optional.of(device));
+        when(telemetryRepository.findByDevice_Id("device-1"))
+                .thenReturn(Optional.empty(), Optional.of(currentTelemetry));
+        when(telemetryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(deviceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        DeviceHeartbeatDTO optedInHeartbeat = new DeviceHeartbeatDTO();
+        optedInHeartbeat.setNetworkType("WIFI");
+        optedInHeartbeat.setWifiSsid("Home Wi-Fi");
+        optedInHeartbeat.setWifiSsidSharingEnabled(true);
+        optedInHeartbeat.setAudioVolumePercent(42);
+        optedInHeartbeat.setAudioMuted(false);
+
+        DevicesResponseDTO optedInResponse = service.heartbeat(
+                optedInHeartbeat, "device-1", "owner@example.com");
+
+        assertEquals("WIFI", optedInResponse.getTelemetry().getNetworkType());
+        assertEquals("Home Wi-Fi", optedInResponse.getTelemetry().getWifiSsid());
+        assertEquals(42, optedInResponse.getTelemetry().getAudioVolumePercent());
+        assertFalse(optedInResponse.getTelemetry().getAudioMuted());
+        assertTrue(optedInResponse.getTelemetry().getWifiSsidSharingEnabled());
+
+        DeviceHeartbeatDTO optedOutHeartbeat = new DeviceHeartbeatDTO();
+        optedOutHeartbeat.setWifiSsidSharingEnabled(false);
+
+        DevicesResponseDTO optedOutResponse = service.heartbeat(
+                optedOutHeartbeat, "device-1", "owner@example.com");
+
+        assertFalse(optedOutResponse.getTelemetry().getWifiSsidSharingEnabled());
+        assertNull(optedOutResponse.getTelemetry().getWifiSsid());
+    }
+
+    @Test
     void disablingLocationSharingClearsPreviouslyStoredCoordinates() {
         DeviceEntity device = deviceOwnedBy("owner@example.com");
         DeviceTelemetryEntity currentTelemetry = DeviceTelemetryEntity.builder()

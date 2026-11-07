@@ -16,6 +16,11 @@ public class DeviceTelemetryResponseDTO {
     private Long freeStorageMB;
     private Long totalStorageMB;
     private Long totalMemoryMB;
+    private String networkType;
+    private String wifiSsid;
+    private Integer audioVolumePercent;
+    private Boolean audioMuted;
+    private Boolean wifiSsidSharingEnabled;
     private Double latitude;
     private Double longitude;
     private Double locationAccuracyMeters;

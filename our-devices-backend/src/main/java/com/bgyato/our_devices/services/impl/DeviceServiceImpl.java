@@ -106,6 +106,14 @@ public class DeviceServiceImpl implements IDeviceService {
         telemetry.setFreeStorageMB(heartbeat.getFreeStorageMB());
         telemetry.setTotalStorageMB(heartbeat.getTotalStorageMB());
         telemetry.setTotalMemoryMB(heartbeat.getTotalMemoryMB());
+        telemetry.setNetworkType(heartbeat.getNetworkType());
+        telemetry.setAudioVolumePercent(heartbeat.getAudioVolumePercent());
+        telemetry.setAudioMuted(heartbeat.getAudioMuted());
+        if (heartbeat.getWifiSsidSharingEnabled() != null) {
+            telemetry.setWifiSsidSharingEnabled(heartbeat.getWifiSsidSharingEnabled());
+            telemetry.setWifiSsid(
+                    heartbeat.getWifiSsidSharingEnabled() ? heartbeat.getWifiSsid() : null);
+        }
         if (heartbeat.getLocationSharingEnabled() != null) {
             telemetry.setLocationSharingEnabled(heartbeat.getLocationSharingEnabled());
             if (!heartbeat.getLocationSharingEnabled()) {
@@ -231,6 +239,11 @@ public class DeviceServiceImpl implements IDeviceService {
                         device.getTelemetry().getFreeStorageMB(),
                         device.getTelemetry().getTotalStorageMB(),
                         device.getTelemetry().getTotalMemoryMB(),
+                        device.getTelemetry().getNetworkType(),
+                        device.getTelemetry().getWifiSsid(),
+                        device.getTelemetry().getAudioVolumePercent(),
+                        device.getTelemetry().getAudioMuted(),
+                        device.getTelemetry().getWifiSsidSharingEnabled(),
                         device.getTelemetry().getLatitude(),
                         device.getTelemetry().getLongitude(),
                         device.getTelemetry().getLocationAccuracyMeters(),

@@ -28,6 +28,13 @@ public class DeviceTelemetryEntity {
     private Long freeStorageMB;
     private Long totalStorageMB;
     private Long totalMemoryMB;
+    @Column(length = 32)
+    private String networkType;
+    @Column(length = 128)
+    private String wifiSsid;
+    private Integer audioVolumePercent;
+    private Boolean audioMuted;
+    private Boolean wifiSsidSharingEnabled;
     private Double latitude;
     private Double longitude;
     private Double locationAccuracyMeters;
