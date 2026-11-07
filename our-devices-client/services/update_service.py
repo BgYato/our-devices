@@ -19,6 +19,7 @@ class UpdateService(QThread):
         device_id: str,
         interval: int = 30000,
         location_sharing: Event | None = None,
+        wifi_ssid_sharing: Event | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -28,6 +29,9 @@ class UpdateService(QThread):
         self.location_sharing = (
             location_sharing if location_sharing is not None else Event()
         )
+        self.wifi_ssid_sharing = (
+            wifi_ssid_sharing if wifi_ssid_sharing is not None else Event()
+        )
         self._stop_event = Event()
 
     def run(self):
@@ -35,7 +39,9 @@ class UpdateService(QThread):
             started_at = monotonic()
             try:
                 response = self.devices_service.send_heartbeat(
-                    self.device_id, self.location_sharing.is_set()
+                    self.device_id,
+                    self.location_sharing.is_set(),
+                    self.wifi_ssid_sharing.is_set(),
                 )
                 location_warning = response.pop("_locationWarning", None)
                 if self.location_sharing.is_set():

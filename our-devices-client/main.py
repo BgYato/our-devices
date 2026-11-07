@@ -20,14 +20,19 @@ logging.basicConfig(
 )
 
 
+CLIENT_DIR = Path(__file__).resolve().parent
+
 # Cargar config
-CONFIG = json.loads(Path("config.json").read_text(encoding="utf-8"))
+CONFIG = json.loads((CLIENT_DIR / "config.json").read_text(encoding="utf-8"))
 BASE_URL = CONFIG["api_url"]
 ENDPOINTS = CONFIG["endpoints"]
 
 
 def main() -> None:
     app = QApplication(sys.argv)
+    app.setApplicationName("OurDevices")
+    app.setOrganizationName("OurDevices")
+    app.setQuitOnLastWindowClosed(False)
 
     api = ApiClient(BASE_URL)
     auth = AuthService(api, ENDPOINTS)
@@ -128,7 +133,7 @@ def main() -> None:
         dash = DashboardWindow(
             user, devices, specs_service, device_id=device_id, on_logout=do_logout
         )
-        dash.resize(1080, 640)
+        dash.resize(1180, 760)
         dash.show()
         return dash
 
@@ -151,6 +156,7 @@ def main() -> None:
             user = auth.me()
             open_dashboard(user, sess["token"])
         except Exception:
+            logging.exception("No se pudo restaurar la sesión guardada.")
             # Token inválido/expirado → pedir login
             clear_session()
             show_login()

@@ -1,6 +1,6 @@
 /* Estilos para login */
 QWidget {
-    background-color: #0f172a;
+    background-color: #080e1a;
     color: #e2e8f0;
     font-family: "Segoe UI", "Inter", sans-serif;
     font-size: 14px;
@@ -14,35 +14,47 @@ QLabel {
 }
 
 #logoTitle {
-    font-size: 42px;
+    font-size: 48px;
     font-weight: 700;
     color: #ffffff;
 }
 
 #logoSubtitle {
     font-size: 16px;
-    color: #dbeafe;
+    color: #a7b5c8;
     line-height: 1.5;
+}
+
+QWidget#leftPanel {
+    background-color: #101a2a;
+    border: 1px solid #1e2b40;
+    border-radius: 18px;
+}
+
+QWidget#rightPanel {
+    background-color: #0d1625;
+    border: 1px solid #1e2b40;
+    border-radius: 18px;
 }
 
 /* Inputs */
 QLineEdit {
-    background-color: #1e293b;
-    border: 2px solid #334155;
+    background-color: #111b2b;
+    border: 1px solid #334155;
     border-radius: 8px;
-    padding: 12px 16px;
+    padding: 13px 15px;
     color: #f1f5f9;
     font-size: 14px;
     margin-bottom: 12px;
 }
 
 QLineEdit:focus {
-    border: 2px solid #3b82f6;
+    border: 1px solid #3b82f6;
 }
 
 /* Boton de login */
 QPushButton {
-    background-color: #3b82f6;
+    background-color: #2563eb;
     color: white;
     border: none;
     border-radius: 8px;
@@ -52,7 +64,7 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background-color: #2563eb;
+    background-color: #3b82f6;
 }
 
 QPushButton:pressed {

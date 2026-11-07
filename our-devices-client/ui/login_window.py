@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
+from pathlib import Path
 import requests
 
 
@@ -18,15 +19,16 @@ class LoginWindow(QWidget):
         super().__init__()
         self.auth_service = auth_service
         self.setWindowTitle("OurDevices - Login")
-        self.resize(960, 540)
-        self.setMinimumSize(900, 520)
+        self.resize(980, 600)
+        self.setMinimumSize(760, 520)
 
         # Cargar estilos externos
-        with open("assets/styles/login.qss", "r", encoding="utf-8") as f:
-            self.setStyleSheet(f.read())
+        style_path = Path(__file__).resolve().parents[1] / "assets" / "styles" / "login.qss"
+        self.setStyleSheet(style_path.read_text(encoding="utf-8"))
 
         # Panel Izquierdo (logo/nombre)
         self.left_panel = QWidget()
+        self.left_panel.setObjectName("leftPanel")
         left_layout = QVBoxLayout()
         left_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -43,6 +45,7 @@ class LoginWindow(QWidget):
 
         # Panel Derecho (login form)
         self.right_panel = QWidget()
+        self.right_panel.setObjectName("rightPanel")
         form_layout = QVBoxLayout()
         form_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 

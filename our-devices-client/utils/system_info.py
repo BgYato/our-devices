@@ -1,10 +1,29 @@
 import platform
 import socket
+import subprocess
 import uuid
 import psutil
 import screeninfo
+import logging
+import re
+from importlib import import_module
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Protocol, cast
+
+
+class _AudioEndpointVolume(Protocol):
+    def GetMasterVolumeLevelScalar(self) -> float: ...
+
+    def GetMute(self) -> int: ...
+
+
+class _SpeakerDevice(Protocol):
+    EndpointVolume: _AudioEndpointVolume
+
+
+class _AudioUtilities(Protocol):
+    @staticmethod
+    def GetSpeakers() -> _SpeakerDevice: ...
 
 
 class SystemInfo:
@@ -121,13 +140,78 @@ class SystemInfo:
             return 0, 0
 
     @staticmethod
-    def get_telemetry() -> dict:
+    def get_wifi_info(share_ssid: bool = False) -> tuple[bool, str | None]:
+        """Obtiene el estado Wi-Fi y, con consentimiento, su SSID en Windows."""
+        if platform.system() != "Windows":
+            return False, None
+        try:
+            result = subprocess.run(
+                ["netsh", "wlan", "show", "interfaces"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            )
+            if result.returncode != 0:
+                logging.warning("Windows no pudo consultar la conexión Wi-Fi activa.")
+                return False, None
+            wifi_connected = re.search(
+                r"^[ \t]*BSSID[ \t]*:[ \t]*(?:[0-9a-f]{2}:){5}[0-9a-f]{2}\b",
+                result.stdout,
+                re.MULTILINE | re.IGNORECASE,
+            ) is not None
+            if not wifi_connected or not share_ssid:
+                return wifi_connected, None
+            ssids = re.findall(
+                r"^[ \t]*SSID[ \t]*:[ \t]*(.*?)[ \t]*$",
+                result.stdout,
+                re.MULTILINE,
+            )
+            ssid = next(
+                (
+                    ssid.strip()
+                    for ssid in ssids
+                    if ssid.strip() and ssid.strip().casefold() != "<unknown ssid>"
+                ),
+                None,
+            )
+            return wifi_connected, ssid
+        except (OSError, subprocess.SubprocessError) as error:
+            logging.warning("No se pudo consultar el nombre de la red Wi-Fi: %s", error)
+            return False, None
+
+    @staticmethod
+    def get_wifi_ssid() -> str | None:
+        """Obtiene el SSID de la conexión Wi-Fi activa en Windows."""
+        return SystemInfo.get_wifi_info(share_ssid=True)[1]
+
+    @staticmethod
+    def get_audio_info() -> tuple[int | None, bool | None]:
+        """Lee el volumen de salida del sistema en Windows."""
+        if platform.system() != "Windows":
+            return None, None
+        try:
+            audio_module = import_module("pycaw.pycaw")
+            audio_utilities = cast(_AudioUtilities, audio_module.AudioUtilities)
+            endpoint = audio_utilities.GetSpeakers().EndpointVolume
+            volume = endpoint.GetMasterVolumeLevelScalar()
+            return round(max(0.0, min(1.0, volume)) * 100), bool(endpoint.GetMute())
+        except Exception:
+            logging.exception("No se pudo consultar el volumen de audio del sistema.")
+            return None, None
+
+    @staticmethod
+    def get_telemetry(share_wifi_ssid: bool = False) -> dict:
         """Obtiene el último snapshot de métricas de uso del equipo."""
         try:
             battery = psutil.sensors_battery()
         except (AttributeError, NotImplementedError, OSError, RuntimeError):
             battery = None
         total_storage, free_storage = SystemInfo.get_storage_info()
+        audio_volume, audio_muted = SystemInfo.get_audio_info()
+        wifi_connected, wifi_ssid = SystemInfo.get_wifi_info(
+            share_ssid=share_wifi_ssid
+        )
         return {
             "ipAddress": SystemInfo.get_ip_address(),
             "batteryLevel": round(battery.percent) if battery is not None else None,
@@ -135,6 +219,11 @@ class SystemInfo:
             "memoryUsagePercent": psutil.virtual_memory().percent,
             "freeStorageMB": free_storage,
             "totalStorageMB": total_storage,
+            "networkType": "WIFI" if wifi_connected else None,
+            "wifiSsid": wifi_ssid,
+            "wifiSsidSharingEnabled": share_wifi_ssid,
+            "audioVolumePercent": audio_volume,
+            "audioMuted": audio_muted,
         }
 
     @staticmethod

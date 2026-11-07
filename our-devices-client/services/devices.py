@@ -66,13 +66,16 @@ class DevicesService:
         return self.api.put(endpoint, device_data, params={"id": device_id})
 
     def send_heartbeat(
-        self, device_id: str, share_location: bool = False
+        self,
+        device_id: str,
+        share_location: bool = False,
+        share_wifi_ssid: bool = False,
     ) -> dict[str, Any]:
         from utils.system_info import SystemInfo
 
         endpoint = self.endpoints["heartbeat_device"].replace("{deviceId}", device_id)
         logging.info("Enviando heartbeat y telemetría del equipo.")
-        telemetry = SystemInfo.get_telemetry()
+        telemetry = SystemInfo.get_telemetry(share_wifi_ssid)
         telemetry["locationSharingEnabled"] = share_location
         telemetry["latitude"] = None
         telemetry["longitude"] = None
