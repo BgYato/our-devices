@@ -21,6 +21,7 @@
 - **App móvil (Expo Go):**
   - Registro e inicio de sesión con la misma API.
   - Registro automático del teléfono y sincronización del estado de dispositivos.
+  - Estado en línea, métricas y mapa con ubicaciones compartidas por dispositivo.
 
 ---
 
@@ -120,6 +121,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
+El panel permite buscar dispositivos, revisar su estado y telemetría, y abrir en OpenStreetMap la última ubicación compartida. En Windows, el volumen de salida se reporta automáticamente; activa **Compartir el nombre de la red Wi-Fi** si también quieres enviar el SSID (nunca la contraseña). Puedes desactivarlo en cualquier momento. Activa **Al cerrar, mantener en segundo plano** para ocultar la ventana en la bandeja del sistema y continuar enviando telemetría; usa **Abrir panel** para restaurarla o **Salir de OurDevices** para detener la sincronización y cerrar el cliente.
+
 ### 🌐 Frontend
 ```bash
 cd our-devices-frontend
@@ -135,13 +138,23 @@ npm install
 
 Copia `.env.example` a `.env` y cambia `EXPO_PUBLIC_API_URL` por la dirección LAN del equipo donde corre el backend, por ejemplo `http://192.168.1.50:8080` (en Windows puedes consultar la IPv4 Wi-Fi con `ipconfig`). El teléfono y el computador deben estar en la misma red; `localhost` en el teléfono apunta al teléfono, no al computador. Permite el puerto 8080 en el firewall si es necesario.
 
-Con el backend iniciado, ejecuta:
+Con el backend iniciado, ejecuta para abrir el proyecto con Expo Go:
 ```bash
 npm start
 ```
-Abre el proyecto con Expo Go escaneando el QR que muestra Expo. La app permite iniciar sesión o crear una cuenta, registra este teléfono como tipo **Móvil** y envía batería, memoria RAM total y almacenamiento disponible/total cada 30 segundos mientras está abierta en primer plano. La ubicación es opcional: solo se solicita permiso al activar **Compartir ubicación**, se actualiza mientras la app está abierta y se elimina del servidor al desactivarla. Expo Go puede suspender la app en segundo plano; la app intenta marcar el teléfono desconectado al pasar a segundo plano y el backend lo considera offline si deja de recibir heartbeat durante 90 segundos. CPU y uso de memoria no están disponibles de forma fiable en Expo Go; se muestran como “Sin datos”.
+`npm start` con Expo Go permite trabajar en la app, pero Expo Go no puede cargar el módulo nativo propio de OurDevices para leer el SSID y el volumen del teléfono. Para probarlo necesitas un **development build**: una app de desarrollo instalable, compilada para OurDevices e incluyendo ese módulo nativo (no es Expo Go ni la versión final de tienda).
 
-Los dispositivos se registran automáticamente desde el cliente de escritorio o la app móvil al iniciar sesión; la web no permite crear registros manuales. En la web, **Mapa general** reúne en un mapa interactivo de OpenStreetMap las últimas ubicaciones compartidas por tus dispositivos, con la hora de cada reporte y acceso a sus datos individuales. La vista **Ver detalles** de cada tarjeta muestra el mapa y la información técnica de ese dispositivo. El cliente de escritorio solicita alta precisión a Windows y permite compartir la ubicación al activar **Compartir ubicación de este PC** y aceptar el permiso del sistema; la opción está desactivada por defecto. La precisión real depende de los servicios de ubicación y sensores disponibles en el equipo, por lo que un PC sin GPS puede reportar una zona aproximada. En otras plataformas de escritorio la ubicación nativa aún no está disponible.
+Para evitar problemas del compilador nativo CMake/Ninja en Windows, puedes crear builds de Android en los servidores de EAS. El proyecto ya incluye su ID de EAS y perfiles de compilación. El perfil `development` incluye herramientas de desarrollo y sirve para conectarse a Metro; por eso su APK puede ser grande. Para instalar y usar la app normalmente, el perfil `preview` genera un APK de tipo release, más pequeño y sin cliente de desarrollo. Usa ese perfil para probar cambios nativos como el nuevo mapa con WebView:
+```powershell
+$easCache = Join-Path $env:TEMP 'ourdevices-eas-npm-cache'
+npm exec --yes --cache="$easCache" --package=eas-cli@27.5.0 -- eas login
+npm exec --yes --cache="$easCache" --package=eas-cli@27.5.0 -- eas build --platform android --profile preview
+```
+La URL de API para los builds EAS se define en `eas.json` como `https://ourdevices.bgyato.com`, por lo que el archivo `.env` local no se sube ni es necesario para la compilación en la nube. Cámbiala allí si el backend público tiene otra URL. La primera compilación puede pedir confirmar la configuración de credenciales Android; permite que EAS genere una clave de firma si todavía no tienes una. Cuando finalice, instala el APK desde el enlace del build. El perfil `development` sigue disponible si necesitas depurar: ejecuta `npm start` en el computador y abre OurDevices instalada en el teléfono; ambos deben poder conectarse a Metro. Si Android no permite instalar el APK `preview` encima de la versión `development` por una diferencia de firma, desinstala la anterior primero; eso borra los datos locales de la app, pero no los datos de tu cuenta en el servidor. Para compilación local con Android Studio/SDK también están disponibles `npm install` y `npm run android`. El perfil `production` genera un Android App Bundle para publicación, que permite distribuir instalaciones optimizadas por dispositivo. En iOS EAS compila en la nube, pero la instalación en dispositivos y el entitlement Wi-Fi requieren configurar las credenciales de Apple.
+
+La app permite iniciar sesión o crear una cuenta, registra este teléfono como tipo **Móvil** y envía batería, memoria RAM total y almacenamiento disponible/total cada 30 segundos mientras está abierta en primer plano. La lista muestra cada dispositivo de forma compacta y permite desplegar sus detalles; los equipos en línea aparecen primero. **Ajustes → Privacidad y permisos** reúne las opciones independientes para compartir la ubicación y el nombre de red Wi-Fi; el nombre SSID nunca incluye la contraseña. La app reporta también el tipo de conexión y, en un development build, el volumen de salida. La ubicación se actualiza mientras la app está abierta y se elimina del servidor al desactivarla. El permiso de ubicación que el sistema exige para leer el SSID no activa el envío de coordenadas. En Android, “Wi-Fi” indica el tipo de conexión; el nombre solo se reporta si activas compartir SSID, concedes permiso de ubicación y mantienes encendido el servicio de ubicación del teléfono. El sistema también puede ocultarlo; en ese caso se verá “nombre no disponible”. Expo Go sigue sirviendo para el resto de la app, aunque el SSID y el volumen nativos aparecerán como “Sin datos”. Expo Go puede suspender la app en segundo plano; el backend la considera offline si deja de recibir heartbeat durante 90 segundos. CPU y uso de memoria no están disponibles de forma fiable en Expo Go. Android e iOS no proporcionan a una app normal la dirección MAC física fiable del teléfono; Android puede devolver una MAC aleatoria o enmascarada y iOS restringe ese dato. El mapa móvil usa OpenStreetMap y necesita conexión a internet; no requiere clave de Google Maps. Como utiliza WebView nativo, después de incorporar este cambio hay que generar e instalar un nuevo development build.
+
+Los dispositivos se registran automáticamente desde el cliente de escritorio o la app móvil al iniciar sesión; la web no permite crear registros manuales. En la web, la portada presenta tarjetas compactas y de tamaño uniforme, con las conexiones activas primero; **Ver detalles** abre el mapa y las métricas y especificaciones que el equipo realmente reportó. **Mapa general** reúne en un mapa interactivo de OpenStreetMap las últimas ubicaciones compartidas por tus dispositivos, con la hora de cada reporte y acceso a sus datos individuales. Los campos sin datos y los valores marcadores de hardware desconocido se ocultan. En el cliente de escritorio, abre **Configuración** para gestionar el uso en segundo plano y activar por separado **Compartir ubicación de este PC** y **Compartir el nombre de la red Wi-Fi**; compartir datos está desactivado por defecto. La ubicación solicita permiso a Windows y solo se consulta cuando está activada. La precisión real depende de los servicios de ubicación y sensores disponibles en el equipo, por lo que un PC sin GPS puede reportar una zona aproximada. En otras plataformas de escritorio la ubicación nativa aún no está disponible.
 
 ---
 
@@ -168,7 +181,7 @@ Cada módulo tiene su propio archivo de configuración:
 - **Frontend web** → interfaz principal para usuarios.
 - **Cliente de escritorio** → ejecuta actualizaciones en segundo plano y muestra datos básicos.
 
-El agente reporta a `POST /devices/{id}/heartbeat`; el servidor registra la hora de recepción y marca el dispositivo offline si no recibe señales durante 90 segundos. El agente también intenta reportar su desconexión al cerrar. `GET /devices/me` devuelve los equipos de la cuenta autenticada y cada respuesta incluye el último snapshot de batería, CPU, memoria y almacenamiento libre. Se conserva solo ese snapshot, sin histórico. El backend determina el propietario a partir de la cuenta autenticada, no de un `userId` enviado por el cliente, y todas las operaciones sobre dispositivos, especificaciones y logs verifican esa propiedad.
+El agente reporta a `POST /devices/{id}/heartbeat`; el servidor registra la hora de recepción y marca el dispositivo offline si no recibe señales durante 90 segundos. El agente también intenta reportar su desconexión al cerrar. `GET /devices/me` devuelve los equipos de la cuenta autenticada y cada respuesta incluye el último snapshot de batería, CPU, memoria, almacenamiento, red y volumen de salida. El SSID de Wi-Fi solo se conserva si el dispositivo activa expresamente esa opción; al desactivarla, el servidor borra el nombre previamente almacenado. Se conserva solo el último snapshot, sin histórico. El backend determina el propietario a partir de la cuenta autenticada, no de un `userId` enviado por el cliente, y todas las operaciones sobre dispositivos, especificaciones y logs verifican esa propiedad.
 
 ---
 
